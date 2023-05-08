@@ -1,0 +1,23 @@
+server:
+  port: ${SERVICE.SETTINGS.PORT}
+logging:
+  level:
+    com:
+      nerosec: ${SERVICE.SETTINGS.LOGGING.LEVEL:INFO}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,loggers,metrics
+spring:
+  flyway:
+    table: SCHEMA_HISTORY
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://${SERVICE.SETTINGS.DATASOURCE.HOST}:${SERVICE.SETTINGS.DATASOURCE.PORT:3306}/${SERVICE.SETTINGS.DATASOURCE.DATABASE}?serverTimezone=UTC
+    username: ${SERVICE.SETTINGS.DATASOURCE.USER}
+    password: ${SERVICE.SETTINGS.DATASOURCE.PASS}
+service:
+  settings:
+    storage:
+      path: ${SERVICE.SETTINGS.STORAGE.PATH}
