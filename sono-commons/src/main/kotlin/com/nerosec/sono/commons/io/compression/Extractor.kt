@@ -4,5 +4,5 @@ import java.nio.file.Path
 
 interface Extractor {
 
-    fun extract(path: Path, directory: Path? = null): List<Path>
+    fun extract(source: Path, directory: Path? = null): List<Path>
 }

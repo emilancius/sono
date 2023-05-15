@@ -12,16 +12,18 @@ import org.springframework.transaction.annotation.Transactional
 @Repository
 interface ResourceRepository : JpaRepository<ResourceEntity, String>, JpaSpecificationExecutor<ResourceEntity> {
 
-    fun getResourceById(id: String): ResourceEntity?
+    fun getResourceEntityById(id: String): ResourceEntity?
 
-    @Query("SELECT resource FROM ResourceEntity resource WHERE resource.parentId = :parentId")
-    fun listResourcesByParentId(@Param("parentId") parentId: String): List<ResourceEntity>
+    fun getResourceEntitiesByParentId(parentId: String): List<ResourceEntity>
+
+    @Query("SELECT resource FROM ResourceEntity resource WHERE resource.id IN (:ids)")
+    fun getResourceEntitiesByIds(@Param("ids") ids: List<String>): List<ResourceEntity>
+
+    @Transactional
+    fun removeResourceEntitiesByUserId(userId: String)
 
     @Modifying
     @Transactional
     @Query("DELETE FROM ResourceEntity resource WHERE resource.id IN (:ids)")
-    fun removeResourcesByIds(@Param("ids") ids: List<String>)
-
-    @Query("SELECT resource FROM ResourceEntity resource WHERE resource.id IN (:ids)")
-    fun listResourcesByIds(@Param("ids") ids: List<String>): List<ResourceEntity>
+    fun removeResourceEntitiesByIds(@Param("ids") ids: List<String>)
 }

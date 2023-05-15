@@ -9,12 +9,12 @@ import org.springframework.transaction.annotation.Transactional
 @Repository
 interface StorageRepository : JpaRepository<StorageEntity, String>, JpaSpecificationExecutor<StorageEntity> {
 
-    fun existsStorageByUserId(userId: String): Boolean
+    fun existsStorageEntityByUserId(userId: String): Boolean
 
-    fun getStorageById(id: String): StorageEntity?
+    fun getStorageEntityById(id: String): StorageEntity?
 
-    fun getStorageByUserId(userId: String): StorageEntity?
+    fun getStorageEntityByUserId(userId: String): StorageEntity?
 
     @Transactional
-    fun removeStorageById(id: String)
+    fun removeStorageEntityById(id: String)
 }

@@ -8,49 +8,49 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import kotlin.io.path.*
 
-class ZipCompressor(
-    private val parameters: CompressionParameters
-) : Compressor {
+class ZipCompressor(private val parameters: CompressionParameters) : Compressor {
 
     companion object {
         private val PATH_SEPARATOR: Char = File.separatorChar
     }
 
-    override fun compress(paths: List<Path>, destination: Path): Path {
+    override fun compress(paths: List<Path>, target: Path): Path {
         paths.forEach {
             if (!it.exists()) {
-                throw IOException(IOException.Type.FILE_NOT_FOUND, "'$it' could not be found.")
+                throw IOException(
+                    IOException.Type.FILE_NOT_FOUND,
+                    "'$it' could not be compressed: '$it' could not be found."
+                )
             }
         }
-        if (destination.exists()) {
-            throw IOException(IOException.Type.FILE_ALREADY_EXISTS, "'$destination' exists.")
+        if (target.exists()) {
+            throw IOException(IOException.Type.FILE_ALREADY_EXISTS, "'$target' could not be created: '$target' exists.")
         }
-        if (!destination.parent.exists()) {
+        if (!target.parent.exists()) {
             throw IOException(
                 IOException.Type.FILE_NOT_FOUND,
-                "Parent directory (${destination.parent}) for '$destination' could not be found."
+                "'$target' could not be created: parent directory '${target.parent}' could not be found."
             )
         }
-        val outputStream = ZipOutputStream(destination.outputStream())
+        val outputStream = ZipOutputStream(target.outputStream())
         outputStream.setLevel(parameters.level)
         outputStream.use {
             paths.forEach { path -> compress(path, path.name, it) }
         }
-        return destination
+        return target
     }
 
     private fun compress(path: Path, name: String, outputStream: ZipOutputStream) {
         if (path.isDirectory()) {
+            // Entry, that is directory must end in path separator character.
             val entry = if (name.last() == PATH_SEPARATOR) name else "$name$PATH_SEPARATOR"
             outputStream.putNextEntry(ZipEntry(entry))
             outputStream.closeEntry()
-            path.list().forEach {
-                compress(it, "$name$PATH_SEPARATOR${it.name}", outputStream)
-            }
-            return
+            path.list().forEach { compress(it, "$name$PATH_SEPARATOR${it.name}", outputStream) }
+        } else {
+            outputStream.putNextEntry(ZipEntry(name))
+            path.inputStream().use { it.copyTo(outputStream) }
+            outputStream.closeEntry()
         }
-        outputStream.putNextEntry(ZipEntry(name))
-        path.inputStream().use { it.copyTo(outputStream) }
-        outputStream.closeEntry()
     }
 }

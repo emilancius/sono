@@ -1,4 +1,4 @@
-package com.nerosec.sono.commons.persistence
+package com.nerosec.sono.commons.persistence.entity
 
 import java.util.UUID
 

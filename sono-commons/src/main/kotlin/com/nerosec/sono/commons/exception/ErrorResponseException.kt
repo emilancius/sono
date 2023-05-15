@@ -8,4 +8,3 @@ class ErrorResponseException(
     val status: Response.Status,
     message: String? = null
 ) : RuntimeException(message)
-

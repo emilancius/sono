@@ -1,4 +1,4 @@
-package com.nerosec.sono.commons.persistence
+package com.nerosec.sono.commons.persistence.entity
 
 import com.nerosec.sono.commons.exception.ArgumentException
 import com.nerosec.sono.commons.extension.Extensions.isEntityId

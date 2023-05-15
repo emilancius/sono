@@ -4,7 +4,7 @@ import com.nerosec.sono.commons.exception.*
 import com.nerosec.sono.commons.extension.Extensions.compressAsZip
 import com.nerosec.sono.commons.extension.Extensions.isEntityId
 import com.nerosec.sono.commons.io.compression.CompressionType
-import com.nerosec.sono.commons.persistence.EntityType
+import com.nerosec.sono.commons.persistence.entity.EntityType
 import com.nerosec.sono.commons.persistence.SortOrder
 import com.nerosec.sono.commons.service.BaseService
 import com.nerosec.sono.commons.service.BaseService.Companion.MAX_PAGE_SIZE
@@ -43,7 +43,7 @@ class ResourceController(
     companion object {
         private val logger = LoggerFactory.getLogger(ResourceController::class.java)
         const val BASE_PATH = "/resources"
-        private const val DFAULT_BUFFER_SIZE = 8 * 1024
+        private const val DEFAULT_BUFFER_SIZE = 8 * 1024
         private const val FORM_DATA_PARAMETER_RESOURCE = "resource"
         private const val FORM_DATA_PARAMETER_RESOURCE_PROPERTIES = "resource_properties"
         private const val PATH_PARAMETER_ID = "id"
