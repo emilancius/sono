@@ -61,12 +61,8 @@ class StorageController(private val storageService: StorageService) {
     @Consumes(APPLICATION_JSON)
     fun createStorage(requestBody: CreateStorageRequestBody, @Context request: HttpServletRequest): Response {
         val userId = requestBody.userId
-        if (userId.trim().isEmpty()) {
-            throw ErrorResponseException(request, BAD_REQUEST, "Request body parameter 'user_id' cannot be empty.")
-        }
-        if (!userId.isEntityId()) {
-            throw ErrorResponseException(request, BAD_REQUEST, "Request body parameter 'user_id' is incorrect.")
-        }
+        if (userId.trim().isEmpty()) throw ErrorResponseException(request, BAD_REQUEST, "Request body parameter 'user_id' cannot be empty.")
+        if (!userId.isEntityId()) throw ErrorResponseException(request, BAD_REQUEST, "Request body parameter 'user_id' is incorrect.")
         return try {
             val storageEntity = storageService.createStorage(userId)
             Response
@@ -182,11 +178,7 @@ class StorageController(private val storageService: StorageService) {
             throw ErrorResponseException(request, BAD_REQUEST, exception.message)
         } catch (exception: Exception) {
             logger.error("Storages could not be listed: unexpected error occurred.", exception)
-            throw ErrorResponseException(
-                request,
-                INTERNAL_SERVER_ERROR,
-                "Storages could not be listed: unexpected error occurred."
-            )
+            throw ErrorResponseException(request, INTERNAL_SERVER_ERROR, "Storages could not be listed: unexpected error occurred.")
         }
     }
 
@@ -203,11 +195,7 @@ class StorageController(private val storageService: StorageService) {
             throw ErrorResponseException(request, NOT_FOUND, exception.message)
         } catch (exception: Exception) {
             logger.error("Storage '{}' could not be removed: unexpected error occurred.", id, exception)
-            throw ErrorResponseException(
-                request,
-                INTERNAL_SERVER_ERROR,
-                "Storage '$id' could not be removed: unexpected error occurred."
-            )
+            throw ErrorResponseException(request, INTERNAL_SERVER_ERROR, "Storage '$id' could not be removed: unexpected error occurred.")
         }
     }
 }
