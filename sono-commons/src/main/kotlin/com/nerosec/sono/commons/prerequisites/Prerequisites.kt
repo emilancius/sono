@@ -18,8 +18,17 @@ object Prerequisites {
         message: (() -> String)? = null
     ) = requireArgument(argument.isEntityId(*entityTypes), message)
 
-    fun requireIntArgumentIsGreaterThan(argument: Int, other: Int, message: (() -> String)? = null) =
-        requireArgument(argument > other, message)
+    fun requireStringArgumentContainsAnyText(argument: String, name: String) =
+        requireArgument(argument.trim().isEmpty()) { "Argument '$name' cannot be empty." }
+
+    fun requireStringArgumentIsEntityId(
+        argument: String,
+        name: String,
+        vararg entityTypes: EntityType
+    ) = requireArgument(argument.isEntityId(*entityTypes)) { "Argument '$name' is incorrect." }
+
+    fun requireIntArgumentIsGreaterThan(argument: Int, name: String, other: Int) =
+        requireArgument(argument > other) { "Argument '$name' must be greater than '$other'." }
 
     fun requireIntArgumentInInIncRange(
         argument: Int,
@@ -28,8 +37,8 @@ object Prerequisites {
         message: (() -> String)? = null
     ) = requireArgument(argument in rangeStart..rangeEnd, message)
 
-    fun requireArgumentIsInCollection(argument: Any, collection: Collection<Any>, message: (() -> String)? = null) =
-        requireArgument(argument in collection, message)
+    fun requireArgumentIsInCollection(argument: Any, name: String, collection: Collection<Any>) =
+        requireArgument(argument in collection) { "Argument '$name'" }
 
     private fun requireArgument(expression: Boolean, message: (() -> String)? = null) {
         if (!expression) {

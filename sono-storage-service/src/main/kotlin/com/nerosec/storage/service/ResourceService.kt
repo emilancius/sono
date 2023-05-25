@@ -6,18 +6,18 @@ import com.nerosec.sono.commons.exception.EntityException
 import com.nerosec.sono.commons.exception.IOException
 import com.nerosec.sono.commons.exception.StateException
 import com.nerosec.sono.commons.extension.Extensions.bytesCount
-import com.nerosec.sono.commons.extension.Extensions.getContentHash
 import com.nerosec.sono.commons.extension.Extensions.compressAsZip
 import com.nerosec.sono.commons.extension.Extensions.copyAs
 import com.nerosec.sono.commons.extension.Extensions.createFromInputStream
 import com.nerosec.sono.commons.extension.Extensions.extractZip
+import com.nerosec.sono.commons.extension.Extensions.getContentHash
 import com.nerosec.sono.commons.extension.Extensions.isZip
 import com.nerosec.sono.commons.extension.Extensions.list
 import com.nerosec.sono.commons.extension.Extensions.moveTo
 import com.nerosec.sono.commons.extension.Extensions.remove
 import com.nerosec.sono.commons.extension.Extensions.renameTo
-import com.nerosec.sono.commons.persistence.entity.EntityType
 import com.nerosec.sono.commons.persistence.SortOrder
+import com.nerosec.sono.commons.persistence.entity.EntityType
 import com.nerosec.sono.commons.prerequisites.Prerequisites.requireIntArgumentInInIncRange
 import com.nerosec.sono.commons.prerequisites.Prerequisites.requireStringArgumentContainsAnyText
 import com.nerosec.sono.commons.prerequisites.Prerequisites.requireStringArgumentIsEntityId
@@ -96,11 +96,11 @@ class ResourceService(
         description: String? = null,
         inputStream: InputStream? = null
     ): ResourceEntity {
-        requireStringArgumentContainsAnyText(parentId) { "Argument 'parentId' cannot be empty." }
-        requireStringArgumentIsEntityId(parentId, EntityType.STORAGE, EntityType.RESOURCE) { "Argument 'parentId' is incorrect." }
-        requireStringArgumentContainsAnyText(userId) { "Argument 'userId' cannot be empty." }
-        requireStringArgumentIsEntityId(userId, EntityType.USER) { "Argument 'userId' is incorrect." }
-        requireStringArgumentContainsAnyText(name) { "Argument 'name' cannot be empty." }
+        requireStringArgumentContainsAnyText(parentId, "parentId")
+        requireStringArgumentIsEntityId(parentId, "parentId", EntityType.STORAGE, EntityType.RESOURCE)
+        requireStringArgumentContainsAnyText(userId, "userId")
+        requireStringArgumentIsEntityId(userId, "userId", EntityType.USER)
+        requireStringArgumentContainsAnyText(name, "name")
         if (!directory && inputStream == null) throw ArgumentException("Argument 'inputStream' is required.")
         val parent =
             when (val entityType = EntityType.createFromEntityId(parentId)) {
@@ -154,8 +154,8 @@ class ResourceService(
     }
 
     fun getResourceById(id: String): ResourceEntity? {
-        requireStringArgumentContainsAnyText(id) { "Argument 'id' cannot be empty." }
-        requireStringArgumentIsEntityId(id, EntityType.RESOURCE) { "Argument 'id' is incorrect." }
+        requireStringArgumentContainsAnyText(id, "id")
+        requireStringArgumentIsEntityId(id, "id", EntityType.RESOURCE)
         return resourceRepository.getResourceEntityById(id)
     }
 
@@ -176,8 +176,8 @@ class ResourceService(
         )
 
     fun removeResourceById(id: String) {
-        requireStringArgumentContainsAnyText(id) { "Argument 'id' cannot be empty." }
-        requireStringArgumentIsEntityId(id, EntityType.RESOURCE) { "Argument 'id' is incorrect." }
+        requireStringArgumentContainsAnyText(id, "id")
+        requireStringArgumentIsEntityId(id, "id", EntityType.RESOURCE)
         val resourceEntity = resourceRepository
             .getResourceEntityById(id)
             ?: throw EntityException(message = "Resource '$id' could not be removed: resource could not be found.")
@@ -188,8 +188,8 @@ class ResourceService(
     }
 
     fun trashResource(id: String): ResourceEntity {
-        requireStringArgumentContainsAnyText(id) { "Argument 'id' cannot be empty." }
-        requireStringArgumentIsEntityId(id, EntityType.RESOURCE) { "Argument 'id' is incorrect." }
+        requireStringArgumentContainsAnyText(id, "id")
+        requireStringArgumentIsEntityId(id, "id", EntityType.RESOURCE)
         var resourceEntity = resourceRepository
             .getResourceEntityById(id)
             ?: throw EntityException(message = "Resource '$id' could not be moved to trash: resource could not be found.")
@@ -224,8 +224,8 @@ class ResourceService(
     }
 
     fun restoreResource(id: String): ResourceEntity {
-        requireStringArgumentContainsAnyText(id) { "Argument 'id' cannot be empty." }
-        requireStringArgumentIsEntityId(id, EntityType.RESOURCE) { "Argument 'id' is incorrect." }
+        requireStringArgumentContainsAnyText(id, "id")
+        requireStringArgumentIsEntityId(id, "id", EntityType.RESOURCE)
         var resourceEntity = resourceRepository
             .getResourceEntityById(id)
             ?: throw EntityException(message = "Resource '$id' could not be restored: resource could not be found.")
@@ -265,8 +265,8 @@ class ResourceService(
     }
 
     fun copyResource(id: String): ResourceEntity {
-        requireStringArgumentContainsAnyText(id) { "Argument 'id' cannot be empty." }
-        requireStringArgumentIsEntityId(id, EntityType.RESOURCE) { "Argument 'id' is incorrect." }
+        requireStringArgumentContainsAnyText(id, "id")
+        requireStringArgumentIsEntityId(id, "id", EntityType.RESOURCE)
         val resourceEntity = resourceRepository
             .getResourceEntityById(id)
             ?: throw EntityException(message = "Resource '$id' could not be copied: resource could not be found.")
@@ -325,10 +325,10 @@ class ResourceService(
     }
 
     fun moveResource(id: String, parentId: String): ResourceEntity {
-        requireStringArgumentContainsAnyText(id) { "Argument 'id' cannot be empty." }
-        requireStringArgumentIsEntityId(id, EntityType.RESOURCE) { "Argument 'id' is incorrect." }
-        requireStringArgumentContainsAnyText(parentId) { "Argument 'parentId' cannot be empty." }
-        requireStringArgumentIsEntityId(parentId, EntityType.STORAGE, EntityType.RESOURCE) { "Argument 'parentId' is incorrect." }
+        requireStringArgumentContainsAnyText(id, "id")
+        requireStringArgumentIsEntityId(id, "id", EntityType.RESOURCE)
+        requireStringArgumentContainsAnyText(parentId, "parentId")
+        requireStringArgumentIsEntityId(parentId, "parentId", EntityType.STORAGE, EntityType.RESOURCE)
         var resourceEntity = resourceRepository
             .getResourceEntityById(id)
             ?: throw EntityException(message = "Resource '$id' could not be moved: resource could not be found.")
@@ -372,9 +372,9 @@ class ResourceService(
     }
 
     fun renameResource(id: String, name: String): ResourceEntity {
-        requireStringArgumentContainsAnyText(id) { "Argument 'id' cannot be empty." }
-        requireStringArgumentIsEntityId(id, EntityType.RESOURCE) { "Argument 'id' is incorrect." }
-        requireStringArgumentContainsAnyText(name) { "Argument 'name' cannot be empty." }
+        requireStringArgumentContainsAnyText(id, "id")
+        requireStringArgumentIsEntityId(id, "id", EntityType.RESOURCE)
+        requireStringArgumentContainsAnyText(name, "name")
         requireIntArgumentInInIncRange(name.length, 1, 255) { "Argument 'name' must be 1 to 255 characters length." }
         var resourceEntity = resourceRepository
             .getResourceEntityById(id)
@@ -405,12 +405,12 @@ class ResourceService(
     fun compressResources(resourceIds: List<String>, parentId: String, name: String): ResourceEntity {
         if (resourceIds.isEmpty()) throw ArgumentException("Argument 'resourceIds' cannot be empty.")
         resourceIds.forEach {
-            requireStringArgumentContainsAnyText(it) { "Argument 'resourceIds' cannot contains an empty value." }
+            requireStringArgumentContainsAnyText(it) { "Argument 'resourceIds' cannot contain an empty value." }
             requireStringArgumentIsEntityId(it, EntityType.RESOURCE) { "Argument 'resourceIds' contains value ($it), that is incorrect." }
         }
-        requireStringArgumentContainsAnyText(parentId) { "Argument 'parentId' cannot be empty." }
-        requireStringArgumentIsEntityId(parentId, EntityType.STORAGE, EntityType.RESOURCE) { "Argument 'parentId' is incorrect." }
-        requireStringArgumentContainsAnyText(name) { "Argument 'name' cannot be empty." }
+        requireStringArgumentContainsAnyText(parentId, "parentId")
+        requireStringArgumentIsEntityId(parentId, "parentId", EntityType.STORAGE, EntityType.RESOURCE)
+        requireStringArgumentContainsAnyText(name, "name")
         requireIntArgumentInInIncRange(name.length, 1, 255) { "Argument 'name' must be 1 to 255 characters length." }
         val resourceEntities = resourceRepository.getResourceEntitiesByIds(resourceIds)
         if (resourceEntities.size != resourceIds.size) {
@@ -468,15 +468,15 @@ class ResourceService(
     }
 
     fun extractResource(id: String, parentId: String): List<ResourceEntity> {
-        requireStringArgumentContainsAnyText(id) { "Argument 'id' cannot be empty." }
-        requireStringArgumentIsEntityId(id, EntityType.RESOURCE) { "Argument 'id' is incorrect." }
+        requireStringArgumentContainsAnyText(id, "id")
+        requireStringArgumentIsEntityId(id, "id", EntityType.RESOURCE)
         val resourceEntity = resourceRepository
             .getResourceEntityById(id)
             ?: throw EntityException(message = "Resource '$id' could not be extracted: resource could not be found.")
         val resource = Paths.get(resourceEntity.path)
         if (!resource.isZip()) throw ArgumentException("Resource '$id' could not be extracted: resource is not an archive.")
-        requireStringArgumentContainsAnyText(parentId) { "Argument 'parentId' cannot be empty." }
-        requireStringArgumentIsEntityId(parentId, EntityType.STORAGE, EntityType.RESOURCE) { "Argument 'parentId' is incorrect." }
+        requireStringArgumentContainsAnyText(parentId, "parentId")
+        requireStringArgumentIsEntityId(parentId, "parentId", EntityType.STORAGE, EntityType.RESOURCE)
         lateinit var userId: String
         val parent =
             when (val parentEntityType = EntityType.createFromEntityId(parentId)) {

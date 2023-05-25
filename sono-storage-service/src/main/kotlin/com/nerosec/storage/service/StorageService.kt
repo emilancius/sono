@@ -5,8 +5,8 @@ import com.nerosec.sono.commons.exception.EntityException
 import com.nerosec.sono.commons.exception.StateException
 import com.nerosec.sono.commons.extension.Extensions.hash
 import com.nerosec.sono.commons.extension.Extensions.remove
-import com.nerosec.sono.commons.persistence.entity.EntityType
 import com.nerosec.sono.commons.persistence.SortOrder
+import com.nerosec.sono.commons.persistence.entity.EntityType
 import com.nerosec.sono.commons.prerequisites.Prerequisites.requireStringArgumentContainsAnyText
 import com.nerosec.sono.commons.prerequisites.Prerequisites.requireStringArgumentIsEntityId
 import com.nerosec.sono.commons.service.BaseService
@@ -56,8 +56,8 @@ class StorageService(
     }
 
     fun createStorage(userId: String): StorageEntity {
-        requireStringArgumentContainsAnyText(userId) { "Argument 'userId' cannot be empty." }
-        requireStringArgumentIsEntityId(userId, EntityType.USER) { "Argument 'userId' is incorrect." }
+        requireStringArgumentContainsAnyText(userId, "userId")
+        requireStringArgumentIsEntityId(userId, "userId", EntityType.USER)
         if (storageRepository.existsStorageEntityByUserId(userId)) {
             throw StateException("Storage could not be created for user '$userId': storage exists.")
         }
@@ -74,14 +74,14 @@ class StorageService(
     }
 
     fun getStorageById(id: String): StorageEntity? {
-        requireStringArgumentContainsAnyText(id) { "Argument 'id' cannot be empty." }
-        requireStringArgumentIsEntityId(id, EntityType.STORAGE) { "Argument 'id' is incorrect." }
+        requireStringArgumentContainsAnyText(id, "id")
+        requireStringArgumentIsEntityId(id, "id", EntityType.STORAGE)
         return storageRepository.getStorageEntityById(id)
     }
 
     fun getStorageByUserId(userId: String): StorageEntity? {
-        requireStringArgumentContainsAnyText(userId) { "Argument 'userId' cannot be empty." }
-        requireStringArgumentIsEntityId(userId, EntityType.USER) { "Argument 'userId' is incorrect." }
+        requireStringArgumentContainsAnyText(userId, "userId")
+        requireStringArgumentIsEntityId(userId, "userId", EntityType.USER)
         return storageRepository.getStorageEntityByUserId(userId)
     }
 
