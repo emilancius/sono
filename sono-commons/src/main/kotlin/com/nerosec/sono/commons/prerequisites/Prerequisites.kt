@@ -28,7 +28,7 @@ object Prerequisites {
     ) = requireArgument(argument.isEntityId(*entityTypes)) { "Argument '$name' is incorrect." }
 
     fun requireIntArgumentIsGreaterThan(argument: Int, name: String, other: Int) =
-        requireArgument(argument > other) { "Argument '$name' must be greater than '$other'." }
+        requireArgument(argument > other) { "Argument's '$name' value ($argument) must be greater than '$other'." }
 
     fun requireIntArgumentInInIncRange(
         argument: Int,
@@ -37,8 +37,15 @@ object Prerequisites {
         message: (() -> String)? = null
     ) = requireArgument(argument in rangeStart..rangeEnd, message)
 
-    fun requireArgumentIsInCollection(argument: Any, name: String, collection: Collection<Any>) =
-        requireArgument(argument in collection) { "Argument '$name'" }
+    fun requireIntArgumentInInIncRange(
+        argument: Int,
+        name: String,
+        rangeStart: Int,
+        rangeEnd: Int
+    ) = requireArgument(argument in rangeStart..rangeEnd) { "Argument's '$name' value ($argument) must be in range [$rangeStart; $rangeEnd]." }
+
+    fun requireArgumentIsInCollection(argument: Any, collection: Collection<Any>, message: (() -> String)? = null) =
+        requireArgument(argument in collection, message)
 
     private fun requireArgument(expression: Boolean, message: (() -> String)? = null) {
         if (!expression) {

@@ -40,12 +40,8 @@ abstract class BaseService<T> {
         sortOrder: SortOrder,
         propertiesToQueryBy: Map<String, Any>
     ): Page<T> {
-        requireIntArgumentIsGreaterThan(page, MIN_PAGE - 1) {
-            "Argument's 'page' value ($page) must be greater than ${MIN_PAGE - 1}."
-        }
-        requireIntArgumentInInIncRange(pageSize, MIN_PAGE_SIZE, MAX_PAGE_SIZE) {
-            "Argument's 'pageSize' value ($pageSize) must be in range [$MIN_PAGE_SIZE; $MAX_PAGE_SIZE]."
-        }
+        requireIntArgumentIsGreaterThan(page, "page", MIN_PAGE - 1)
+        requireIntArgumentInInIncRange(pageSize, "pageSize", MIN_PAGE_SIZE, MAX_PAGE_SIZE)
         val propertiesToSortByThatAreSupported = getPropertiesToSortBy()
         requireArgumentIsInCollection(propertyToSortBy, propertiesToSortByThatAreSupported) {
             "Argument's 'propertyToSortBy' value ($propertyToSortBy) is not supported. Supported properties to sort by are: $propertiesToSortByThatAreSupported."

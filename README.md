@@ -1,2 +1,3 @@
 # sono
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=emilancius_sono&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=emilancius_sono)
+[![buddy pipeline](https://app.buddy.works/nerosec/sono/pipelines/pipeline/450783/badge.svg?token=77f045f05ff0b19fc401a85d3c3fb496fa0eb4f7e2fd8eb64acb7508c3df3794 "buddy pipeline")](https://app.buddy.works/nerosec/sono/pipelines/pipeline/450783)
