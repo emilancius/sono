@@ -4,7 +4,6 @@ import com.nerosec.sono.commons.persistence.entity.BaseEntity
 import com.nerosec.sono.commons.persistence.entity.EntityId
 import com.nerosec.sono.commons.persistence.entity.EntityType
 import com.nerosec.storage.contract.response.Resource
-import com.nerosec.storage.persistence.repository.ResourceRepository
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.Table
