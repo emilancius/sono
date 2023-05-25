@@ -1,11 +1,19 @@
 package com.nerosec.storage.contract.controller
 
+import com.nerosec.sono.commons.contract.BaseController
 import com.nerosec.sono.commons.exception.EntityException
 import com.nerosec.sono.commons.exception.ErrorResponseException
 import com.nerosec.sono.commons.exception.ParameterException
 import com.nerosec.sono.commons.exception.StateException
 import com.nerosec.sono.commons.extension.Extensions.isEntityId
 import com.nerosec.sono.commons.persistence.SortOrder
+import com.nerosec.sono.commons.persistence.entity.EntityType
+import com.nerosec.sono.commons.prerequisites.Prerequisites.requireRequestBodyPropertyContainsAnyText
+import com.nerosec.sono.commons.prerequisites.Prerequisites.requireRequestBodyPropertyIsEntityId
+import com.nerosec.sono.commons.prerequisites.Prerequisites.requireRequestPathParameterIsEntityId
+import com.nerosec.sono.commons.prerequisites.Prerequisites.requireRequestQueryParameterIsGreater
+import com.nerosec.sono.commons.prerequisites.Prerequisites.requireRequestQueryParameterIsInCollection
+import com.nerosec.sono.commons.prerequisites.Prerequisites.requireRequestQueryParameterIsInIncRange
 import com.nerosec.sono.commons.service.BaseService.Companion.DEFAULT_PAGE
 import com.nerosec.sono.commons.service.BaseService.Companion.DEFAULT_PAGE_SIZE
 import com.nerosec.sono.commons.service.BaseService.Companion.DEFAULT_SORT_ORDER
@@ -31,18 +39,11 @@ import java.net.URI
 @Controller
 @Path(StorageController.BASE_PATH)
 @Produces(APPLICATION_JSON)
-class StorageController(private val storageService: StorageService) {
+class StorageController(private val storageService: StorageService) : BaseController() {
 
     companion object {
         private val logger = LoggerFactory.getLogger(StorageController::class.java)
         const val BASE_PATH = "/storages"
-        private const val PATH_PARAMETER_ID = "id"
-        private const val QUERY_PARAMETER_PAGE = "page"
-        private const val QUERY_PARAMETER_PAGE_SIZE = "page_size"
-        private const val QUERY_PARAMETER_SORT_BY = "sort_by"
-        private const val QUERY_PARAMETER_SORT_ORDER = "sort_order"
-        private const val QUERY_PARAMETER_ID = "id"
-        private const val QUERY_PARAMETER_USER_ID = "user_id"
         private val CONTRACT_TO_ENTITY_PROPERTY_MAPPING = mapOf(
             "id" to StorageEntity_.ID,
             "user_id" to StorageEntity_.USER_ID,
@@ -61,8 +62,8 @@ class StorageController(private val storageService: StorageService) {
     @Consumes(APPLICATION_JSON)
     fun createStorage(requestBody: CreateStorageRequestBody, @Context request: HttpServletRequest): Response {
         val userId = requestBody.userId
-        if (userId.trim().isEmpty()) throw ErrorResponseException(request, BAD_REQUEST, "Request body parameter 'user_id' cannot be empty.")
-        if (!userId.isEntityId()) throw ErrorResponseException(request, BAD_REQUEST, "Request body parameter 'user_id' is incorrect.")
+        requireRequestBodyPropertyContainsAnyText(userId, "userId", request)
+        requireRequestBodyPropertyIsEntityId(userId, "userId", EntityType.USER, request)
         return try {
             val storageEntity = storageService.createStorage(userId)
             Response
@@ -73,28 +74,20 @@ class StorageController(private val storageService: StorageService) {
             throw ErrorResponseException(request, CONFLICT, exception.message)
         } catch (exception: Exception) {
             logger.error("Storage for user '{}' could not be created: unexpected error occurred.", userId, exception)
-            throw ErrorResponseException(
-                request,
-                INTERNAL_SERVER_ERROR,
-                "Storage for user '$userId' could not be created: unexpected error occurred."
-            )
+            throw ErrorResponseException(request, INTERNAL_SERVER_ERROR, "Storage for user '$userId' could not be created: unexpected error occurred.")
         }
     }
 
     @GET
     @Path("/{$PATH_PARAMETER_ID}")
     fun getStorage(@PathParam(PATH_PARAMETER_ID) id: String, @Context request: HttpServletRequest): Response {
-        if (!id.isEntityId()) throw ErrorResponseException(request, BAD_REQUEST, "Path parameter 'id' is incorrect.")
+        requireRequestPathParameterIsEntityId(id, PATH_PARAMETER_ID, EntityType.STORAGE, request)
         val storageEntity =
             try {
                 storageService.getStorageById(id)
             } catch (exception: Exception) {
                 logger.error("Storage '{}' could not be retrieved: unexpected error occurred.", id, exception)
-                throw ErrorResponseException(
-                    request,
-                    INTERNAL_SERVER_ERROR,
-                    "Storage '$id' could not be retrieved: unexpected error occurred."
-                )
+                throw ErrorResponseException(request, INTERNAL_SERVER_ERROR, "Storage '$id' could not be retrieved: unexpected error occurred.")
             }
         return storageEntity
             ?.let {
@@ -116,33 +109,9 @@ class StorageController(private val storageService: StorageService) {
         @QueryParam(QUERY_PARAMETER_USER_ID) userId: String? = null,
         @Context request: HttpServletRequest
     ): Response {
-        page?.let {
-            if (it < MIN_PAGE) {
-                throw ErrorResponseException(
-                    request,
-                    BAD_REQUEST,
-                    "Query parameter's '$QUERY_PARAMETER_PAGE' value ($it) cannot be less than $MIN_PAGE."
-                )
-            }
-        }
-        pageSize?.let {
-            if (it !in MIN_PAGE_SIZE..MAX_PAGE_SIZE) {
-                throw ErrorResponseException(
-                    request,
-                    BAD_REQUEST,
-                    "Query parameter's '$QUERY_PARAMETER_PAGE_SIZE' value ($it) must be in range [$MIN_PAGE_SIZE; $MAX_PAGE_SIZE]."
-                )
-            }
-        }
-        sortBy?.let {
-            if (it !in SUPPORTED_CONTRACT_PROPERTIES_TO_SORT_BY) {
-                throw ErrorResponseException(
-                    request,
-                    BAD_REQUEST,
-                    "Query parameter's '$QUERY_PARAMETER_SORT_BY' value ($it) is not supported. Supported properties to be sorted by are: $SUPPORTED_CONTRACT_PROPERTIES_TO_SORT_BY."
-                )
-            }
-        }
+        page?.let { requireRequestQueryParameterIsGreater(it, QUERY_PARAMETER_PAGE, MIN_PAGE - 1, request) }
+        pageSize?.let { requireRequestQueryParameterIsInIncRange(it, QUERY_PARAMETER_PAGE_SIZE, MIN_PAGE_SIZE, MAX_PAGE_SIZE, request) }
+        sortBy?.let { requireRequestQueryParameterIsInCollection(it, QUERY_PARAMETER_SORT_BY, SUPPORTED_CONTRACT_PROPERTIES_TO_SORT_BY, request) }
         val propertiesToQueryBy = HashMap<String, Any>()
         id?.let { propertiesToQueryBy[StorageEntity_.ID] = it }
         userId?.let { propertiesToQueryBy[StorageEntity_.USER_ID] = it }
@@ -152,8 +121,7 @@ class StorageController(private val storageService: StorageService) {
                 .listStorages(
                     page = p,
                     pageSize = pageSize ?: DEFAULT_PAGE_SIZE,
-                    propertyToSortBy = sortBy?.let { CONTRACT_TO_ENTITY_PROPERTY_MAPPING[it] }
-                        ?: DEFAULT_PROPERTY_TO_SORT_BY,
+                    propertyToSortBy = sortBy?.let { CONTRACT_TO_ENTITY_PROPERTY_MAPPING[it] } ?: DEFAULT_PROPERTY_TO_SORT_BY,
                     sortOrder = sortOrder ?: DEFAULT_SORT_ORDER,
                     propertiesToQueryBy = propertiesToQueryBy
                 )
@@ -185,7 +153,7 @@ class StorageController(private val storageService: StorageService) {
     @DELETE
     @Path("/{$PATH_PARAMETER_ID}")
     fun removeStorage(@PathParam(PATH_PARAMETER_ID) id: String, @Context request: HttpServletRequest): Response {
-        if (!id.isEntityId()) throw ErrorResponseException(request, BAD_REQUEST, "Path parameter 'id' is incorrect.")
+        if (!id.isEntityId(EntityType.STORAGE)) throw ErrorResponseException(request, BAD_REQUEST, "Path parameter 'id' is incorrect.")
         return try {
             storageService.removeStorageById(id)
             Response

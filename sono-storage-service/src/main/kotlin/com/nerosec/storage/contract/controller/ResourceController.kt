@@ -1,11 +1,17 @@
 package com.nerosec.storage.contract.controller
 
+import com.nerosec.sono.commons.contract.BaseController
 import com.nerosec.sono.commons.exception.*
 import com.nerosec.sono.commons.extension.Extensions.compressAsZip
 import com.nerosec.sono.commons.extension.Extensions.isEntityId
 import com.nerosec.sono.commons.io.compression.CompressionType
-import com.nerosec.sono.commons.persistence.entity.EntityType
 import com.nerosec.sono.commons.persistence.SortOrder
+import com.nerosec.sono.commons.persistence.entity.EntityType
+import com.nerosec.sono.commons.prerequisites.Prerequisites.requireRequestBodyPropertyContainsAnyText
+import com.nerosec.sono.commons.prerequisites.Prerequisites.requireRequestPathParameterIsEntityId
+import com.nerosec.sono.commons.prerequisites.Prerequisites.requireRequestQueryParameterIsGreater
+import com.nerosec.sono.commons.prerequisites.Prerequisites.requireRequestQueryParameterIsInCollection
+import com.nerosec.sono.commons.prerequisites.Prerequisites.requireRequestQueryParameterIsInIncRange
 import com.nerosec.sono.commons.service.BaseService
 import com.nerosec.sono.commons.service.BaseService.Companion.MAX_PAGE_SIZE
 import com.nerosec.sono.commons.service.BaseService.Companion.MIN_PAGE
@@ -38,22 +44,14 @@ import kotlin.io.path.name
 class ResourceController(
     private val storageService: StorageService,
     private val resourceService: ResourceService
-) {
+) : BaseController() {
 
     companion object {
         private val logger = LoggerFactory.getLogger(ResourceController::class.java)
         const val BASE_PATH = "/resources"
-        private const val DEFAULT_BUFFER_SIZE = 8 * 1024
         private const val FORM_DATA_PARAMETER_RESOURCE = "resource"
         private const val FORM_DATA_PARAMETER_RESOURCE_PROPERTIES = "resource_properties"
-        private const val PATH_PARAMETER_ID = "id"
-        private const val QUERY_PARAMETER_PAGE = "page"
-        private const val QUERY_PARAMETER_PAGE_SIZE = "page_size"
-        private const val QUERY_PARAMETER_SORT_BY = "sort_by"
-        private const val QUERY_PARAMETER_SORT_ORDER = "sort_order"
-        private const val QUERY_PARAMETER_ID = "id"
         private const val QUERY_PARAMETER_PARENT_ID = "parent_id"
-        private const val QUERY_PARAMETER_USER_ID = "user_id"
         private const val QUERY_PARAMETER_CONTENT_HASH = "content_hash"
         private const val QUERY_PARAMETER_NAME = "name"
         private const val QUERY_PARAMETER_EXTENSION = "extension"
@@ -105,24 +103,12 @@ class ResourceController(
         @Context request: HttpServletRequest
     ): Response {
         val (parentId, userId, name, directory, description) = CreateResourceRequestBody.createFromJsonString(properties)
-        if (parentId.trim().isEmpty()) {
-            throw ErrorResponseException(request, BAD_REQUEST, "Request parameter 'parent_id' cannot be empty.")
-        }
-        if (!parentId.isEntityId(EntityType.STORAGE, EntityType.RESOURCE)) {
-            throw ErrorResponseException(request, BAD_REQUEST, "Request parameter 'parent_id' is incorrect.")
-        }
-        if (userId.trim().isEmpty()) {
-            throw ErrorResponseException(request, BAD_REQUEST, "Request parameter 'user_id' cannot be empty.")
-        }
-        if (!userId.isEntityId(EntityType.USER)) {
-            throw ErrorResponseException(request, BAD_REQUEST, "Request parameter 'user_id' is incorrect.")
-        }
-        if (name.trim().isEmpty()) {
-            throw ErrorResponseException(request, BAD_REQUEST, "Request parameter 'name' cannot be empty.")
-        }
-        if (!directory && resourceInputStream == null) {
-            throw ErrorResponseException(request, BAD_REQUEST, "Request parameter 'resource' is required.")
-        }
+        if (parentId.trim().isEmpty()) throw ErrorResponseException(request, BAD_REQUEST, "Request parameter 'parent_id' cannot be empty.")
+        if (!parentId.isEntityId(EntityType.STORAGE, EntityType.RESOURCE)) throw ErrorResponseException(request, BAD_REQUEST, "Request parameter 'parent_id' is incorrect.")
+        if (userId.trim().isEmpty()) throw ErrorResponseException(request, BAD_REQUEST, "Request parameter 'user_id' cannot be empty.")
+        if (!userId.isEntityId(EntityType.USER)) throw ErrorResponseException(request, BAD_REQUEST, "Request parameter 'user_id' is incorrect.")
+        if (name.trim().isEmpty()) throw ErrorResponseException(request, BAD_REQUEST, "Request parameter 'name' cannot be empty.")
+        if (!directory && resourceInputStream == null) throw ErrorResponseException(request, BAD_REQUEST, "Request parameter 'resource' is required.")
         return try {
             val resourceEntity = resourceService
                 .createResource(parentId, userId, name, directory, description, resourceInputStream)
@@ -142,30 +128,20 @@ class ResourceController(
             throw ErrorResponseException(request, CONFLICT, exception.message)
         } catch (exception: Exception) {
             logger.error("Resource '{}' could not be created: unexpected error occurred.", name, exception)
-            throw ErrorResponseException(
-                request,
-                INTERNAL_SERVER_ERROR,
-                "Resource '$name' could not be created: unexpected error occurred."
-            )
+            throw ErrorResponseException(request, INTERNAL_SERVER_ERROR, "Resource '$name' could not be created: unexpected error occurred.")
         }
     }
 
     @GET
     @Path("/{$PATH_PARAMETER_ID}")
     fun getResource(@PathParam(PATH_PARAMETER_ID) id: String, @Context request: HttpServletRequest): Response {
-        if (!id.isEntityId(EntityType.RESOURCE)) {
-            throw ErrorResponseException(request, BAD_REQUEST, "Path parameter '$PATH_PARAMETER_ID' is incorrect.")
-        }
+        requireRequestPathParameterIsEntityId(id, PATH_PARAMETER_ID, EntityType.RESOURCE, request)
         val resourceEntity =
             try {
                 resourceService.getResourceById(id)
             } catch (exception: Exception) {
                 logger.error("Resource '{}' could not be retrieved: unexpected error occurred.", id, exception)
-                throw ErrorResponseException(
-                    request,
-                    INTERNAL_SERVER_ERROR,
-                    "Resource '$id' could not be retrieved: unexpected error occurred."
-                )
+                throw ErrorResponseException(request, INTERNAL_SERVER_ERROR, "Resource '$id' could not be retrieved: unexpected error occurred.")
             }
         return resourceEntity
             ?.let {
@@ -195,33 +171,9 @@ class ResourceController(
         @QueryParam(QUERY_PARAMETER_VERSION) version: Int? = null,
         @Context request: HttpServletRequest
     ): Response {
-        page?.let {
-            if (it < MIN_PAGE) {
-                throw ErrorResponseException(
-                    request,
-                    BAD_REQUEST,
-                    "Query parameter's '$QUERY_PARAMETER_PAGE' value ($it) cannot be less than $MIN_PAGE."
-                )
-            }
-        }
-        pageSize?.let {
-            if (it !in MIN_PAGE_SIZE..MAX_PAGE_SIZE) {
-                throw ErrorResponseException(
-                    request,
-                    BAD_REQUEST,
-                    "Query parameter's '$QUERY_PARAMETER_PAGE_SIZE' value ($it) must be in range [$MIN_PAGE_SIZE; $MAX_PAGE_SIZE]."
-                )
-            }
-        }
-        sortBy?.let {
-            if (it !in SUPPORTED_CONTRACT_PROPERTIES_TO_SORT_BY) {
-                throw ErrorResponseException(
-                    request,
-                    BAD_REQUEST,
-                    "Query parameter's '$QUERY_PARAMETER_SORT_BY' value ($it) is not supported. Supported properties to be sorted by are: $SUPPORTED_CONTRACT_PROPERTIES_TO_SORT_BY."
-                )
-            }
-        }
+        page?.let { requireRequestQueryParameterIsGreater(it, QUERY_PARAMETER_PAGE, MIN_PAGE - 1, request) }
+        pageSize?.let { requireRequestQueryParameterIsInIncRange(it, QUERY_PARAMETER_PAGE_SIZE, MIN_PAGE_SIZE, MAX_PAGE_SIZE, request) }
+        sortBy?.let { requireRequestQueryParameterIsInCollection(it, QUERY_PARAMETER_SORT_BY, SUPPORTED_CONTRACT_PROPERTIES_TO_SORT_BY, request) }
         val propertiesToQueryBy = HashMap<String, Any>()
         id?.let { propertiesToQueryBy[ResourceEntity_.ID] = it }
         parentId?.let { propertiesToQueryBy[ResourceEntity_.PARENT_ID] = it }
@@ -239,8 +191,7 @@ class ResourceController(
                 .listResources(
                     page = p,
                     pageSize = pageSize ?: BaseService.DEFAULT_PAGE_SIZE,
-                    propertyToSortBy = sortBy?.let { CONTRACT_TO_ENTITY_PROPERTY_MAPPING[it] }
-                        ?: StorageService.DEFAULT_PROPERTY_TO_SORT_BY,
+                    propertyToSortBy = sortBy?.let { CONTRACT_TO_ENTITY_PROPERTY_MAPPING[it] } ?: StorageService.DEFAULT_PROPERTY_TO_SORT_BY,
                     sortOrder = sortOrder ?: BaseService.DEFAULT_SORT_ORDER,
                     propertiesToQueryBy = propertiesToQueryBy
                 )
@@ -265,20 +216,14 @@ class ResourceController(
             throw ErrorResponseException(request, BAD_REQUEST, exception.message)
         } catch (exception: Exception) {
             logger.error("Resources could not be listed: unexpected error occurred.", exception)
-            throw ErrorResponseException(
-                request,
-                INTERNAL_SERVER_ERROR,
-                "Resources could not be listed: unexpected error occurred."
-            )
+            throw ErrorResponseException(request, INTERNAL_SERVER_ERROR, "Resources could not be listed: unexpected error occurred.")
         }
     }
 
     @DELETE
     @Path("/{$PATH_PARAMETER_ID}")
     fun removeResource(@PathParam(PATH_PARAMETER_ID) id: String, @Context request: HttpServletRequest): Response {
-        if (!id.isEntityId(EntityType.RESOURCE)) {
-            throw ErrorResponseException(request, BAD_REQUEST, "Path parameter '$PATH_PARAMETER_ID' is incorrect.")
-        }
+        requireRequestPathParameterIsEntityId(id, PATH_PARAMETER_ID, EntityType.RESOURCE, request)
         return try {
             resourceService.removeResourceById(id)
             Response
@@ -288,20 +233,14 @@ class ResourceController(
             throw ErrorResponseException(request, NOT_FOUND, exception.message)
         } catch (exception: Exception) {
             logger.error("Resource '{}' could not be removed: unexpected error occurred.", id, exception)
-            throw ErrorResponseException(
-                request,
-                INTERNAL_SERVER_ERROR,
-                "Resource '$id' could not be removed: unexpected error occurred."
-            )
+            throw ErrorResponseException(request, INTERNAL_SERVER_ERROR, "Resource '$id' could not be removed: unexpected error occurred.")
         }
     }
 
     @POST
     @Path("/{$PATH_PARAMETER_ID}/actions/trash")
     fun trashResource(@PathParam(PATH_PARAMETER_ID) id: String, @Context request: HttpServletRequest): Response {
-        if (!id.isEntityId(EntityType.RESOURCE)) {
-            throw ErrorResponseException(request, BAD_REQUEST, "Path parameter '$PATH_PARAMETER_ID' is incorrect.")
-        }
+        requireRequestPathParameterIsEntityId(id, PATH_PARAMETER_ID, EntityType.RESOURCE, request)
         return try {
             val resourceEntity = resourceService.trashResource(id)
             Response
@@ -314,20 +253,14 @@ class ResourceController(
             throw ErrorResponseException(request, CONFLICT, exception.message)
         } catch (exception: Exception) {
             logger.error("Resource '{}' could not be moved to trash: unexpected error occurred.", id, exception)
-            throw ErrorResponseException(
-                request,
-                INTERNAL_SERVER_ERROR,
-                "Resource '$id' could not be moved to trash: unexpected error occurred."
-            )
+            throw ErrorResponseException(request, INTERNAL_SERVER_ERROR, "Resource '$id' could not be moved to trash: unexpected error occurred.")
         }
     }
 
     @POST
     @Path("/{$PATH_PARAMETER_ID}/actions/restore")
     fun restoreResource(@PathParam(PATH_PARAMETER_ID) id: String, @Context request: HttpServletRequest): Response {
-        if (!id.isEntityId(EntityType.RESOURCE)) {
-            throw ErrorResponseException(request, BAD_REQUEST, "Path parameter '$PATH_PARAMETER_ID' is incorrect.")
-        }
+        requireRequestPathParameterIsEntityId(id, PATH_PARAMETER_ID, EntityType.RESOURCE, request)
         return try {
             val resourceEntity = resourceService.restoreResource(id)
             Response
@@ -340,20 +273,14 @@ class ResourceController(
             throw ErrorResponseException(request, CONFLICT, exception.message)
         } catch (exception: Exception) {
             logger.error("Resource '{}' could not be moved restored: unexpected error occurred.", id, exception)
-            throw ErrorResponseException(
-                request,
-                INTERNAL_SERVER_ERROR,
-                "Resource '$id' could not be moved restored: unexpected error occurred."
-            )
+            throw ErrorResponseException(request, INTERNAL_SERVER_ERROR, "Resource '$id' could not be moved restored: unexpected error occurred.")
         }
     }
 
     @POST
     @Path("/{$PATH_PARAMETER_ID}/actions/copy")
     fun copyResource(@PathParam(PATH_PARAMETER_ID) id: String, @Context request: HttpServletRequest): Response {
-        if (!id.isEntityId(EntityType.RESOURCE)) {
-            throw ErrorResponseException(request, BAD_REQUEST, "Path parameter '$PATH_PARAMETER_ID' is incorrect.")
-        }
+        requireRequestPathParameterIsEntityId(id, PATH_PARAMETER_ID, EntityType.RESOURCE, request)
         return try {
             val resourceEntity = resourceService.copyResource(id)
             Response
@@ -366,11 +293,7 @@ class ResourceController(
             throw ErrorResponseException(request, CONFLICT, exception.message)
         } catch (exception: Exception) {
             logger.error("Resource '{}' could not be copied: unexpected error occurred.", id, exception)
-            throw ErrorResponseException(
-                request,
-                INTERNAL_SERVER_ERROR,
-                "Resource '$id' could not be copied: unexpected error occurred."
-            )
+            throw ErrorResponseException(request, INTERNAL_SERVER_ERROR, "Resource '$id' could not be copied: unexpected error occurred.")
         }
     }
 
@@ -381,9 +304,7 @@ class ResourceController(
         requestBody: ChangeResourceLocationRequestBody,
         @Context request: HttpServletRequest
     ): Response {
-        if (!id.isEntityId(EntityType.RESOURCE)) {
-            throw ErrorResponseException(request, BAD_REQUEST, "Path parameter '$PATH_PARAMETER_ID' is incorrect.")
-        }
+        requireRequestPathParameterIsEntityId(id, PATH_PARAMETER_ID, EntityType.RESOURCE, request)
         val parentId = requestBody.parentId
         if (!parentId.isEntityId(EntityType.STORAGE, EntityType.RESOURCE)) {
             throw ErrorResponseException(request, BAD_REQUEST, "Request body parameter 'parent_id' is incorrect.")
@@ -400,11 +321,7 @@ class ResourceController(
             throw ErrorResponseException(request, CONFLICT, exception.message)
         } catch (exception: Exception) {
             logger.error("Resource '{}' could not be moved: unexpected error occurred.", id, exception)
-            throw ErrorResponseException(
-                request,
-                INTERNAL_SERVER_ERROR,
-                "Resource '$id' could not be copied: unexpected error occurred."
-            )
+            throw ErrorResponseException(request, INTERNAL_SERVER_ERROR, "Resource '$id' could not be copied: unexpected error occurred.")
         }
     }
 
@@ -415,19 +332,11 @@ class ResourceController(
         requestBody: RenameResourceRequestBody,
         @Context request: HttpServletRequest
     ): Response {
-        if (!id.isEntityId(EntityType.RESOURCE)) {
-            throw ErrorResponseException(request, BAD_REQUEST, "Path parameter '$PATH_PARAMETER_ID' is incorrect.")
-        }
+        requireRequestPathParameterIsEntityId(id, PATH_PARAMETER_ID, EntityType.RESOURCE, request)
         val name = requestBody.name
-        if (name.trim().isEmpty()) {
-            throw ErrorResponseException(request, BAD_REQUEST, "Request body parameter 'name' cannot be empty.")
-        }
+        requireRequestBodyPropertyContainsAnyText(name, "name", request)
         if (name.length !in 1..255) {
-            throw ErrorResponseException(
-                request,
-                BAD_REQUEST,
-                "Request body parameter 'name' must be 1 to 255 characters length."
-            )
+            throw ErrorResponseException(request, BAD_REQUEST, "Request body parameter 'name' must be 1 to 255 characters length.")
         }
         return try {
             val resourceEntity = resourceService.renameResource(id, name)
@@ -441,11 +350,7 @@ class ResourceController(
             throw ErrorResponseException(request, CONFLICT, exception.message)
         } catch (exception: Exception) {
             logger.error("Resource '{}' could not be moved: unexpected error occurred.", id, exception)
-            throw ErrorResponseException(
-                request,
-                INTERNAL_SERVER_ERROR,
-                "Resource '$id' could not be copied: unexpected error occurred."
-            )
+            throw ErrorResponseException(request, INTERNAL_SERVER_ERROR, "Resource '$id' could not be copied: unexpected error occurred.")
         }
     }
 
@@ -461,18 +366,10 @@ class ResourceController(
         }
         resourceIds.forEach {
             if (it.trim().isEmpty()) {
-                throw ErrorResponseException(
-                    request,
-                    BAD_REQUEST,
-                    "Request body parameter 'request_ids' cannot contain empty value."
-                )
+                throw ErrorResponseException(request, BAD_REQUEST, "Request body parameter 'request_ids' cannot contain empty value.")
             }
             if (!it.isEntityId(EntityType.RESOURCE)) {
-                throw ErrorResponseException(
-                    request,
-                    BAD_REQUEST,
-                    "Request body parameter 'request_ids' contains value ($it), that is incorrect."
-                )
+                throw ErrorResponseException(request, BAD_REQUEST, "Request body parameter 'request_ids' contains value ($it), that is incorrect.")
             }
         }
         if (parentId.trim().isEmpty()) {
@@ -485,11 +382,7 @@ class ResourceController(
             throw ErrorResponseException(request, BAD_REQUEST, "Request body parameter 'name' cannot be empty.")
         }
         if (name.length !in 1..255) {
-            throw ErrorResponseException(
-                request,
-                BAD_REQUEST,
-                "Request body parameter 'name' must be 1 to 255 characters length."
-            )
+            throw ErrorResponseException(request, BAD_REQUEST, "Request body parameter 'name' must be 1 to 255 characters length.")
         }
         return try {
             val resourceEntity = resourceService.compressResources(resourceIds, parentId, name)
@@ -503,11 +396,7 @@ class ResourceController(
             throw ErrorResponseException(request, CONFLICT, exception.message)
         } catch (exception: Exception) {
             logger.error("Resources could not be compressed: unexpected error occurred.", exception)
-            throw ErrorResponseException(
-                request,
-                INTERNAL_SERVER_ERROR,
-                "Resources could not be compressed: unexpected error occurred."
-            )
+            throw ErrorResponseException(request, INTERNAL_SERVER_ERROR, "Resources could not be compressed: unexpected error occurred.")
         }
     }
 
@@ -540,11 +429,7 @@ class ResourceController(
             throw ErrorResponseException(request, CONFLICT, exception.message)
         } catch (exception: Exception) {
             logger.error("Resource could not be extracted: unexpected error occurred.", exception)
-            throw ErrorResponseException(
-                request,
-                INTERNAL_SERVER_ERROR,
-                "Resource could not be extracted: unexpected error occurred."
-            )
+            throw ErrorResponseException(request, INTERNAL_SERVER_ERROR, "Resource could not be extracted: unexpected error occurred.")
         }
     }
 
@@ -552,9 +437,7 @@ class ResourceController(
     @Path("/{$PATH_PARAMETER_ID}/contents")
     @Produces(APPLICATION_OCTET_STREAM)
     fun getResourceContents(@PathParam(PATH_PARAMETER_ID) id: String, @Context request: HttpServletRequest): Response {
-        if (!id.isEntityId(EntityType.RESOURCE)) {
-            throw ErrorResponseException(request, BAD_REQUEST, "Path parameter 'id' is incorrect.")
-        }
+        requireRequestPathParameterIsEntityId(id, PATH_PARAMETER_ID, EntityType.RESOURCE, request)
         return try {
             val resourceEntity = resourceService
                 .getResourceById(id)
@@ -589,11 +472,7 @@ class ResourceController(
             throw ErrorResponseException(request, NOT_FOUND, exception.message)
         } catch (exception: Exception) {
             logger.error("Resource '{}' could not be retrieved: unexpected error occurred.", id, exception)
-            throw ErrorResponseException(
-                request,
-                INTERNAL_SERVER_ERROR,
-                "Resource '$id' could not be retrieved: unexpected error occurred."
-            )
+            throw ErrorResponseException(request, INTERNAL_SERVER_ERROR, "Resource '$id' could not be retrieved: unexpected error occurred.")
         }
     }
 }

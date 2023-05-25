@@ -1,6 +1,9 @@
 package com.nerosec.sono.commons.exception
 
-class IOException(val type: Type, message: String? = null) : RuntimeException(message) {
+class IOException(
+    val type: Type,
+    message: String? = null
+) : RuntimeException(message) {
 
     enum class Type {
         FILE_ALREADY_EXISTS,
