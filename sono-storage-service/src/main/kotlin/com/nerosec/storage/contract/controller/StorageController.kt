@@ -5,15 +5,15 @@ import com.nerosec.sono.commons.exception.EntityException
 import com.nerosec.sono.commons.exception.ErrorResponseException
 import com.nerosec.sono.commons.exception.ParameterException
 import com.nerosec.sono.commons.exception.StateException
-import com.nerosec.sono.commons.extension.Extensions.isEntityId
 import com.nerosec.sono.commons.persistence.SortOrder
 import com.nerosec.sono.commons.persistence.entity.EntityType
+import com.nerosec.sono.commons.prerequisites.Prerequisites.requirePathParameterContainsAnyText
+import com.nerosec.sono.commons.prerequisites.Prerequisites.requirePathParameterIsEntityId
+import com.nerosec.sono.commons.prerequisites.Prerequisites.requireQueryParameterIsGreater
+import com.nerosec.sono.commons.prerequisites.Prerequisites.requireQueryParameterIsInCollection
+import com.nerosec.sono.commons.prerequisites.Prerequisites.requireQueryParameterIsInRange
 import com.nerosec.sono.commons.prerequisites.Prerequisites.requireRequestBodyPropertyContainsAnyText
 import com.nerosec.sono.commons.prerequisites.Prerequisites.requireRequestBodyPropertyIsEntityId
-import com.nerosec.sono.commons.prerequisites.Prerequisites.requireRequestPathParameterIsEntityId
-import com.nerosec.sono.commons.prerequisites.Prerequisites.requireRequestQueryParameterIsGreater
-import com.nerosec.sono.commons.prerequisites.Prerequisites.requireRequestQueryParameterIsInCollection
-import com.nerosec.sono.commons.prerequisites.Prerequisites.requireRequestQueryParameterIsInIncRange
 import com.nerosec.sono.commons.service.BaseService.Companion.DEFAULT_PAGE
 import com.nerosec.sono.commons.service.BaseService.Companion.DEFAULT_PAGE_SIZE
 import com.nerosec.sono.commons.service.BaseService.Companion.DEFAULT_SORT_ORDER
@@ -54,16 +54,15 @@ class StorageController(private val storageService: StorageService) : BaseContro
             StorageEntity_.USER_ID to "user_id",
             StorageEntity_.CREATED to "created_on"
         )
-        private val SUPPORTED_CONTRACT_PROPERTIES_TO_SORT_BY = SUPPORTED_PROPERTIES_TO_SORT_BY
-            .map { ENTITY_TO_CONTRACT_PROPERTY_MAPPING[it] }
+        private val SUPPORTED_CONTRACT_PROPERTIES_TO_SORT_BY = SUPPORTED_PROPERTIES_TO_SORT_BY.map { ENTITY_TO_CONTRACT_PROPERTY_MAPPING[it] }
     }
 
     @POST
     @Consumes(APPLICATION_JSON)
     fun createStorage(requestBody: CreateStorageRequestBody, @Context request: HttpServletRequest): Response {
-        val userId = requestBody.userId
-        requireRequestBodyPropertyContainsAnyText(userId, "userId", request)
-        requireRequestBodyPropertyIsEntityId(userId, "userId", EntityType.USER, request)
+        val (userId) = requestBody
+        requireRequestBodyPropertyContainsAnyText(userId, request, "user_id")
+        requireRequestBodyPropertyIsEntityId(userId, EntityType.USER, request, "user_id")
         return try {
             val storageEntity = storageService.createStorage(userId)
             Response
@@ -81,7 +80,8 @@ class StorageController(private val storageService: StorageService) : BaseContro
     @GET
     @Path("/{$PATH_PARAMETER_ID}")
     fun getStorage(@PathParam(PATH_PARAMETER_ID) id: String, @Context request: HttpServletRequest): Response {
-        requireRequestPathParameterIsEntityId(id, PATH_PARAMETER_ID, EntityType.STORAGE, request)
+        requirePathParameterContainsAnyText(id, request, PATH_PARAMETER_ID)
+        requirePathParameterIsEntityId(id, EntityType.STORAGE, request, PATH_PARAMETER_ID)
         val storageEntity =
             try {
                 storageService.getStorageById(id)
@@ -109,9 +109,9 @@ class StorageController(private val storageService: StorageService) : BaseContro
         @QueryParam(QUERY_PARAMETER_USER_ID) userId: String? = null,
         @Context request: HttpServletRequest
     ): Response {
-        page?.let { requireRequestQueryParameterIsGreater(it, QUERY_PARAMETER_PAGE, MIN_PAGE - 1, request) }
-        pageSize?.let { requireRequestQueryParameterIsInIncRange(it, QUERY_PARAMETER_PAGE_SIZE, MIN_PAGE_SIZE, MAX_PAGE_SIZE, request) }
-        sortBy?.let { requireRequestQueryParameterIsInCollection(it, QUERY_PARAMETER_SORT_BY, SUPPORTED_CONTRACT_PROPERTIES_TO_SORT_BY, request) }
+        page?.let { requireQueryParameterIsGreater(it, MIN_PAGE - 1, request, QUERY_PARAMETER_PAGE) }
+        pageSize?.let { requireQueryParameterIsInRange(it, MIN_PAGE_SIZE, MAX_PAGE_SIZE, request, QUERY_PARAMETER_PAGE_SIZE) }
+        sortBy?.let { requireQueryParameterIsInCollection(it, SUPPORTED_CONTRACT_PROPERTIES_TO_SORT_BY, request, QUERY_PARAMETER_SORT_BY) }
         val propertiesToQueryBy = HashMap<String, Any>()
         id?.let { propertiesToQueryBy[StorageEntity_.ID] = it }
         userId?.let { propertiesToQueryBy[StorageEntity_.USER_ID] = it }
@@ -153,7 +153,8 @@ class StorageController(private val storageService: StorageService) : BaseContro
     @DELETE
     @Path("/{$PATH_PARAMETER_ID}")
     fun removeStorage(@PathParam(PATH_PARAMETER_ID) id: String, @Context request: HttpServletRequest): Response {
-        if (!id.isEntityId(EntityType.STORAGE)) throw ErrorResponseException(request, BAD_REQUEST, "Path parameter 'id' is incorrect.")
+        requirePathParameterContainsAnyText(id, request, PATH_PARAMETER_ID)
+        requirePathParameterIsEntityId(id, EntityType.STORAGE, request, PATH_PARAMETER_ID)
         return try {
             storageService.removeStorageById(id)
             Response

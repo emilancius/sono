@@ -5,8 +5,8 @@ import com.nerosec.sono.commons.persistence.SortOrder
 import com.nerosec.sono.commons.persistence.query.Condition
 import com.nerosec.sono.commons.persistence.query.Operation
 import com.nerosec.sono.commons.prerequisites.Prerequisites.requireArgumentIsInCollection
-import com.nerosec.sono.commons.prerequisites.Prerequisites.requireIntArgumentInInIncRange
-import com.nerosec.sono.commons.prerequisites.Prerequisites.requireIntArgumentIsGreaterThan
+import com.nerosec.sono.commons.prerequisites.Prerequisites.requireIntArgumentIsGreater
+import com.nerosec.sono.commons.prerequisites.Prerequisites.requireIntArgumentIsInRange
 import jakarta.persistence.metamodel.SingularAttribute
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
@@ -40,8 +40,8 @@ abstract class BaseService<T> {
         sortOrder: SortOrder,
         propertiesToQueryBy: Map<String, Any>
     ): Page<T> {
-        requireIntArgumentIsGreaterThan(page, "page", MIN_PAGE - 1)
-        requireIntArgumentInInIncRange(pageSize, "pageSize", MIN_PAGE_SIZE, MAX_PAGE_SIZE)
+        requireIntArgumentIsGreater(page, MIN_PAGE - 1, "page")
+        requireIntArgumentIsInRange(pageSize, MIN_PAGE_SIZE, MAX_PAGE_SIZE, "pageSize")
         val propertiesToSortByThatAreSupported = getPropertiesToSortBy()
         requireArgumentIsInCollection(propertyToSortBy, propertiesToSortByThatAreSupported) {
             "Argument's 'propertyToSortBy' value ($propertyToSortBy) is not supported. Supported properties to sort by are: $propertiesToSortByThatAreSupported."

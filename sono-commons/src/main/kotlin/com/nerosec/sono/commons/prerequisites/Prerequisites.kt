@@ -9,69 +9,111 @@ import jakarta.ws.rs.core.Response
 
 object Prerequisites {
 
-    fun requireStringArgumentContainsAnyText(argument: String, message: (() -> String)? = null) =
-        requireArgument(argument.trim().isEmpty(), message)
+    // ArgumentException
 
-    fun requireStringArgumentIsEntityId(
-        argument: String,
-        vararg entityTypes: EntityType,
-        message: (() -> String)? = null
-    ) = requireArgument(argument.isEntityId(*entityTypes), message)
+    fun requireStringArgumentContainsAnyText(argument: String, message: (() -> String?)? = null) =
+        requireArgument(!argument.trim().isEmpty(), message)
 
     fun requireStringArgumentContainsAnyText(argument: String, name: String) =
-        requireArgument(argument.trim().isEmpty()) { "Argument '$name' cannot be empty." }
+        requireStringArgumentContainsAnyText(argument) { "Argument '$name' cannot be empty." }
 
-    fun requireStringArgumentIsEntityId(
-        argument: String,
-        name: String,
-        vararg entityTypes: EntityType
-    ) = requireArgument(argument.isEntityId(*entityTypes)) { "Argument '$name' is incorrect." }
+    fun requireStringArgumentIsEntityId(argument: String, entityTypes: Array<EntityType>, message: (() -> String?)? = null) =
+        requireArgument(!argument.isEntityId(*entityTypes), message)
 
-    fun requireIntArgumentIsGreaterThan(argument: Int, name: String, other: Int) =
-        requireArgument(argument > other) { "Argument's '$name' value ($argument) must be greater than '$other'." }
+    fun requireStringArgumentIsEntityId(argument: String, entityType: EntityType, message: (() -> String?)? = null) =
+        requireStringArgumentIsEntityId(argument, arrayOf(entityType), message)
 
-    fun requireIntArgumentInInIncRange(
-        argument: Int,
-        rangeStart: Int,
-        rangeEnd: Int,
-        message: (() -> String)? = null
-    ) = requireArgument(argument in rangeStart..rangeEnd, message)
+    fun requireStringArgumentIsEntityId(argument: String, entityTypes: Array<EntityType>, name: String) =
+        requireStringArgumentIsEntityId(argument, entityTypes) { "Argument '$name' is incorrect." }
 
-    fun requireIntArgumentInInIncRange(
-        argument: Int,
-        name: String,
-        rangeStart: Int,
-        rangeEnd: Int
-    ) = requireArgument(argument in rangeStart..rangeEnd) { "Argument's '$name' value ($argument) must be in range [$rangeStart; $rangeEnd]." }
+    fun requireStringArgumentIsEntityId(argument: String, entityType: EntityType, name: String) =
+        requireStringArgumentIsEntityId(argument, arrayOf(entityType), name)
 
-    fun requireArgumentIsInCollection(argument: Any, collection: Collection<Any>, message: (() -> String)? = null) =
+    fun requireIntArgumentIsGreater(argument: Int, other: Int, message: (() -> String?)? = null) =
+        requireArgument(argument > other, message)
+
+    fun requireIntArgumentIsGreater(argument: Int, other: Int, name: String) =
+        requireIntArgumentIsGreater(argument, other) { "Argument's '$name' value ($argument) must be greater than $other." }
+
+    fun requireIntArgumentIsInRange(argument: Int, rangeStart: Int, rangeEnd: Int, message: (() -> String?)? = null) =
+        requireArgument(argument in rangeStart..rangeEnd, message)
+
+    fun requireIntArgumentIsInRange(argument: Int, rangeStart: Int, rangeEnd: Int, name: String) =
+        requireIntArgumentIsInRange(argument, rangeStart, rangeEnd) { "Argument's '$name' value ($argument) must be in range [$rangeStart; $rangeEnd]." }
+
+    fun requireArgumentIsInCollection(argument: Any?, collection: Collection<Any?>, message: (() -> String?)? = null) =
         requireArgument(argument in collection, message)
 
-    private fun requireArgument(expression: Boolean, message: (() -> String)? = null) {
-        if (!expression) {
-            throw ArgumentException(message?.invoke())
-        }
+    fun requireArgumentIsInCollection(argument: Any?, collection: Collection<Any?>, name: String) =
+        requireArgumentIsInCollection(argument, collection) { "Argument's '$name' value ($argument) must be one of $collection." }
+
+    // ErrorResponseException (BAD_REQUEST)
+
+    fun requirePathParameterContainsAnyText(parameter: String, request: HttpServletRequest, message: (() -> String?)? = null) =
+        requireRequest(!parameter.trim().isEmpty(), request, message)
+
+    fun requirePathParameterContainsAnyText(parameter: String, request: HttpServletRequest, name: String) =
+        requirePathParameterContainsAnyText(parameter, request) { "Path parameter '$name' cannot be empty." }
+
+    fun requirePathParameterIsEntityId(parameter: String, entityTypes: Array<EntityType>, request: HttpServletRequest, message: (() -> String?)? = null) =
+        requireRequest(parameter.isEntityId(*entityTypes), request, message)
+
+    fun requirePathParameterIsEntityId(parameter: String, entityType: EntityType, request: HttpServletRequest, message: (() -> String?)? = null) =
+        requirePathParameterIsEntityId(parameter, arrayOf(entityType), request, message)
+
+    fun requirePathParameterIsEntityId(parameter: String, entityTypes: Array<EntityType>, request: HttpServletRequest, name: String) =
+        requirePathParameterIsEntityId(parameter, entityTypes, request) { "Path parameter '$name' is incorrect." }
+
+    fun requirePathParameterIsEntityId(parameter: String, entityType: EntityType, request: HttpServletRequest, name: String) =
+        requirePathParameterIsEntityId(parameter, arrayOf(entityType), request, name)
+
+    fun requireQueryParameterIsGreater(parameter: Int, other: Int, request: HttpServletRequest, message: (() -> String?)? = null) =
+        requireRequest(parameter > other, request, message)
+
+    fun requireQueryParameterIsGreater(parameter: Int, other: Int, request: HttpServletRequest, name: String) =
+        requireQueryParameterIsGreater(parameter, other, request) { "Query parameter's '$name' value ($parameter) must be greater thant $other." }
+
+    fun requireQueryParameterIsInRange(parameter: Int, rangeStart: Int, rangeEnd: Int, request: HttpServletRequest, message: (() -> String?)? = null) =
+        requireRequest(parameter in rangeStart..rangeEnd, request, message)
+
+    fun requireQueryParameterIsInRange(parameter: Int, rangeStart: Int, rangeEnd: Int, request: HttpServletRequest, name: String) =
+        requireQueryParameterIsInRange(parameter, rangeStart, rangeEnd, request) { "Query parameter's '$name' value ($parameter) must be in range [$rangeStart; $rangeEnd]." }
+
+    fun requireQueryParameterIsInCollection(parameter: Any?, collection: Collection<Any?>, request: HttpServletRequest, message: (() -> String?)? = null) =
+        requireRequest(parameter in collection, request, message)
+
+    fun requireQueryParameterIsInCollection(parameter: Any?, collection: Collection<Any?>, request: HttpServletRequest, name: String) =
+        requireQueryParameterIsInCollection(parameter, collection, request) { "Query parameter's '$name' value ($parameter) must be one of $collection." }
+
+    fun requireRequestBodyPropertyContainsAnyText(property: String, request: HttpServletRequest, message: (() -> String?)? = null) =
+        requireRequest(!property.trim().isEmpty(), request, message)
+
+    fun requireRequestBodyPropertyContainsAnyText(property: String, request: HttpServletRequest, name: String) =
+        requireRequestBodyPropertyContainsAnyText(property, request) { "Request body property '$name' cannot be empty." }
+
+    fun requireRequestBodyPropertyIsEntityId(property: String, entityTypes: Array<EntityType>, request: HttpServletRequest, message: (() -> String?)? = null) =
+        requireRequest(property.isEntityId(*entityTypes), request, message)
+
+    fun requireRequestBodyPropertyIsEntityId(property: String, entityType: EntityType, request: HttpServletRequest, message: (() -> String?)? = null) =
+        requireRequestBodyPropertyIsEntityId(property, arrayOf(entityType), request, message)
+
+    fun requireRequestBodyPropertyIsEntityId(property: String, entityTypes: Array<EntityType>, request: HttpServletRequest, name: String) =
+        requireRequestBodyPropertyIsEntityId(property, entityTypes, request) { "Request body property '$name' is incorrect." }
+
+    fun requireRequestBodyPropertyIsEntityId(property: String, entityType: EntityType, request: HttpServletRequest, name: String) =
+        requireRequestBodyPropertyIsEntityId(property, arrayOf(entityType), request, name)
+
+    fun requireRequestBodyPropertyLength(property: String, minLength: Int, maxLength: Int, request: HttpServletRequest, message: (() -> String?)? = null) =
+        requireRequest(property.length in minLength..maxLength, request, message)
+
+    fun requireRequestBodyPropertyLength(property: String, minLength: Int, maxLength: Int, request: HttpServletRequest, name: String) =
+        requireRequestBodyPropertyLength(property, minLength, maxLength, request) { "Request body property '$name' must be $minLength to $maxLength characters length." }
+
+    private fun requireArgument(expression: Boolean, message: (() -> String?)? = null) {
+        if (!expression) throw ArgumentException(message?.invoke())
     }
 
-    fun requireRequestBodyPropertyContainsAnyText(property: String, name: String, request: HttpServletRequest) =
-        requireRequest(!property.trim().isEmpty(), request) { "Request body property '$name' cannot be empty." }
-
-    fun requireRequestBodyPropertyIsEntityId(property: String, name: String, entityType: EntityType, request: HttpServletRequest) =
-        requireRequest(property.isEntityId(entityType), request) { "Request body property '$name' is incorrect." }
-
-    fun requireRequestPathParameterIsEntityId(parameter: String, name: String, entityType: EntityType, request: HttpServletRequest) =
-        requireRequest(parameter.isEntityId(entityType), request) { "Path parameter '$name' is incorrect." }
-
-    fun requireRequestQueryParameterIsGreater(parameter: Int, name: String, other: Int, request: HttpServletRequest) =
-        requireRequest(parameter > other, request) { "Query parameter's '$name' value ($parameter) must be greater than $other." }
-
-    fun requireRequestQueryParameterIsInIncRange(parameter: Int, name: String, rangeStart: Int, rangeEnd: Int, request: HttpServletRequest) =
-        requireRequest(parameter in rangeStart..rangeEnd, request) { "Query parameter's '$name' value ($parameter) must be in range [$rangeStart; $rangeEnd]." }
-
-    fun requireRequestQueryParameterIsInCollection(parameter: Any?, name: String, collection: Collection<Any?>, request: HttpServletRequest) =
-        requireRequest(parameter in collection, request) { "Query parameter's '$name' value ($parameter) must be one of $collection." }
-
-    private fun requireRequest(expression: Boolean, request: HttpServletRequest, message: () -> String) {
-        if (!expression) throw ErrorResponseException(request, Response.Status.BAD_REQUEST, message.invoke())
+    private fun requireRequest(expression: Boolean, request: HttpServletRequest, message: (() -> String?)? = null) {
+        if (!expression) throw ErrorResponseException(request, Response.Status.BAD_REQUEST, message?.invoke())
     }
 }

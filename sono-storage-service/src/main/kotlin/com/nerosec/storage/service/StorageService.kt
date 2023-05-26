@@ -57,7 +57,7 @@ class StorageService(
 
     fun createStorage(userId: String): StorageEntity {
         requireStringArgumentContainsAnyText(userId, "userId")
-        requireStringArgumentIsEntityId(userId, "userId", EntityType.USER)
+        requireStringArgumentIsEntityId(userId, EntityType.USER, "userId")
         if (storageRepository.existsStorageEntityByUserId(userId)) {
             throw StateException("Storage could not be created for user '$userId': storage exists.")
         }
@@ -75,13 +75,13 @@ class StorageService(
 
     fun getStorageById(id: String): StorageEntity? {
         requireStringArgumentContainsAnyText(id, "id")
-        requireStringArgumentIsEntityId(id, "id", EntityType.STORAGE)
+        requireStringArgumentIsEntityId(id, EntityType.STORAGE, "id")
         return storageRepository.getStorageEntityById(id)
     }
 
     fun getStorageByUserId(userId: String): StorageEntity? {
         requireStringArgumentContainsAnyText(userId, "userId")
-        requireStringArgumentIsEntityId(userId, "userId", EntityType.USER)
+        requireStringArgumentIsEntityId(userId, EntityType.USER, "userId")
         return storageRepository.getStorageEntityByUserId(userId)
     }
 
@@ -102,8 +102,7 @@ class StorageService(
         )
 
     fun removeStorageById(id: String) {
-        val storageEntry = getStorageById(id)
-            ?: throw EntityException(message = "Storage '$id' could not be removed: no such storage could be found.")
+        val storageEntry = getStorageById(id) ?: throw EntityException(message = "Storage '$id' could not be removed: no such storage could be found.")
         Paths.get(storageEntry.path).remove()
         resourceRepository.removeResourceEntitiesByUserId(storageEntry.userId)
         storageRepository.removeStorageEntityById(id)

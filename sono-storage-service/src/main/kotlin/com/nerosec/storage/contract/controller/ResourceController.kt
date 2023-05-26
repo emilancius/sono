@@ -3,15 +3,17 @@ package com.nerosec.storage.contract.controller
 import com.nerosec.sono.commons.contract.BaseController
 import com.nerosec.sono.commons.exception.*
 import com.nerosec.sono.commons.extension.Extensions.compressAsZip
-import com.nerosec.sono.commons.extension.Extensions.isEntityId
 import com.nerosec.sono.commons.io.compression.CompressionType
 import com.nerosec.sono.commons.persistence.SortOrder
 import com.nerosec.sono.commons.persistence.entity.EntityType
+import com.nerosec.sono.commons.prerequisites.Prerequisites.requirePathParameterContainsAnyText
+import com.nerosec.sono.commons.prerequisites.Prerequisites.requirePathParameterIsEntityId
+import com.nerosec.sono.commons.prerequisites.Prerequisites.requireQueryParameterIsGreater
+import com.nerosec.sono.commons.prerequisites.Prerequisites.requireQueryParameterIsInCollection
+import com.nerosec.sono.commons.prerequisites.Prerequisites.requireQueryParameterIsInRange
 import com.nerosec.sono.commons.prerequisites.Prerequisites.requireRequestBodyPropertyContainsAnyText
-import com.nerosec.sono.commons.prerequisites.Prerequisites.requireRequestPathParameterIsEntityId
-import com.nerosec.sono.commons.prerequisites.Prerequisites.requireRequestQueryParameterIsGreater
-import com.nerosec.sono.commons.prerequisites.Prerequisites.requireRequestQueryParameterIsInCollection
-import com.nerosec.sono.commons.prerequisites.Prerequisites.requireRequestQueryParameterIsInIncRange
+import com.nerosec.sono.commons.prerequisites.Prerequisites.requireRequestBodyPropertyIsEntityId
+import com.nerosec.sono.commons.prerequisites.Prerequisites.requireRequestBodyPropertyLength
 import com.nerosec.sono.commons.service.BaseService
 import com.nerosec.sono.commons.service.BaseService.Companion.MAX_PAGE_SIZE
 import com.nerosec.sono.commons.service.BaseService.Companion.MIN_PAGE
@@ -103,15 +105,14 @@ class ResourceController(
         @Context request: HttpServletRequest
     ): Response {
         val (parentId, userId, name, directory, description) = CreateResourceRequestBody.createFromJsonString(properties)
-        if (parentId.trim().isEmpty()) throw ErrorResponseException(request, BAD_REQUEST, "Request parameter 'parent_id' cannot be empty.")
-        if (!parentId.isEntityId(EntityType.STORAGE, EntityType.RESOURCE)) throw ErrorResponseException(request, BAD_REQUEST, "Request parameter 'parent_id' is incorrect.")
-        if (userId.trim().isEmpty()) throw ErrorResponseException(request, BAD_REQUEST, "Request parameter 'user_id' cannot be empty.")
-        if (!userId.isEntityId(EntityType.USER)) throw ErrorResponseException(request, BAD_REQUEST, "Request parameter 'user_id' is incorrect.")
-        if (name.trim().isEmpty()) throw ErrorResponseException(request, BAD_REQUEST, "Request parameter 'name' cannot be empty.")
+        requireRequestBodyPropertyContainsAnyText(parentId, request) { "Request parameter 'parent_id' cannot be empty." }
+        requireRequestBodyPropertyIsEntityId(parentId, arrayOf(EntityType.STORAGE, EntityType.RESOURCE), request) { "Request parameter 'parent_id' is incorrect." }
+        requireRequestBodyPropertyContainsAnyText(userId, request) { "Request parameter 'user_id' cannot be empty." }
+        requireRequestBodyPropertyIsEntityId(userId, EntityType.USER, request) { "Request parameter 'user_id' is incorrect." }
+        requireRequestBodyPropertyContainsAnyText(name, request) { "Request parameter 'name' cannot be empty." }
         if (!directory && resourceInputStream == null) throw ErrorResponseException(request, BAD_REQUEST, "Request parameter 'resource' is required.")
         return try {
-            val resourceEntity = resourceService
-                .createResource(parentId, userId, name, directory, description, resourceInputStream)
+            val resourceEntity = resourceService.createResource(parentId, userId, name, directory, description, resourceInputStream)
             Response
                 .created(URI.create("$BASE_PATH/${resourceEntity.id}"))
                 .entity(resourceEntity.toResource())
@@ -135,7 +136,8 @@ class ResourceController(
     @GET
     @Path("/{$PATH_PARAMETER_ID}")
     fun getResource(@PathParam(PATH_PARAMETER_ID) id: String, @Context request: HttpServletRequest): Response {
-        requireRequestPathParameterIsEntityId(id, PATH_PARAMETER_ID, EntityType.RESOURCE, request)
+        requirePathParameterContainsAnyText(id, request, PATH_PARAMETER_ID)
+        requirePathParameterIsEntityId(id, EntityType.RESOURCE, request, PATH_PARAMETER_ID)
         val resourceEntity =
             try {
                 resourceService.getResourceById(id)
@@ -171,9 +173,9 @@ class ResourceController(
         @QueryParam(QUERY_PARAMETER_VERSION) version: Int? = null,
         @Context request: HttpServletRequest
     ): Response {
-        page?.let { requireRequestQueryParameterIsGreater(it, QUERY_PARAMETER_PAGE, MIN_PAGE - 1, request) }
-        pageSize?.let { requireRequestQueryParameterIsInIncRange(it, QUERY_PARAMETER_PAGE_SIZE, MIN_PAGE_SIZE, MAX_PAGE_SIZE, request) }
-        sortBy?.let { requireRequestQueryParameterIsInCollection(it, QUERY_PARAMETER_SORT_BY, SUPPORTED_CONTRACT_PROPERTIES_TO_SORT_BY, request) }
+        page?.let { requireQueryParameterIsGreater(it, MIN_PAGE - 1, request, QUERY_PARAMETER_PAGE) }
+        pageSize?.let { requireQueryParameterIsInRange(it, MIN_PAGE_SIZE, MAX_PAGE_SIZE, request, QUERY_PARAMETER_PAGE_SIZE) }
+        sortBy?.let { requireQueryParameterIsInCollection(it, SUPPORTED_CONTRACT_PROPERTIES_TO_SORT_BY, request, QUERY_PARAMETER_SORT_BY) }
         val propertiesToQueryBy = HashMap<String, Any>()
         id?.let { propertiesToQueryBy[ResourceEntity_.ID] = it }
         parentId?.let { propertiesToQueryBy[ResourceEntity_.PARENT_ID] = it }
@@ -223,7 +225,8 @@ class ResourceController(
     @DELETE
     @Path("/{$PATH_PARAMETER_ID}")
     fun removeResource(@PathParam(PATH_PARAMETER_ID) id: String, @Context request: HttpServletRequest): Response {
-        requireRequestPathParameterIsEntityId(id, PATH_PARAMETER_ID, EntityType.RESOURCE, request)
+        requirePathParameterContainsAnyText(id, request, PATH_PARAMETER_ID)
+        requirePathParameterIsEntityId(id, EntityType.RESOURCE, request, PATH_PARAMETER_ID)
         return try {
             resourceService.removeResourceById(id)
             Response
@@ -240,7 +243,8 @@ class ResourceController(
     @POST
     @Path("/{$PATH_PARAMETER_ID}/actions/trash")
     fun trashResource(@PathParam(PATH_PARAMETER_ID) id: String, @Context request: HttpServletRequest): Response {
-        requireRequestPathParameterIsEntityId(id, PATH_PARAMETER_ID, EntityType.RESOURCE, request)
+        requirePathParameterContainsAnyText(id, request, PATH_PARAMETER_ID)
+        requirePathParameterIsEntityId(id, EntityType.RESOURCE, request, PATH_PARAMETER_ID)
         return try {
             val resourceEntity = resourceService.trashResource(id)
             Response
@@ -260,7 +264,8 @@ class ResourceController(
     @POST
     @Path("/{$PATH_PARAMETER_ID}/actions/restore")
     fun restoreResource(@PathParam(PATH_PARAMETER_ID) id: String, @Context request: HttpServletRequest): Response {
-        requireRequestPathParameterIsEntityId(id, PATH_PARAMETER_ID, EntityType.RESOURCE, request)
+        requirePathParameterContainsAnyText(id, request, PATH_PARAMETER_ID)
+        requirePathParameterIsEntityId(id, EntityType.RESOURCE, request, PATH_PARAMETER_ID)
         return try {
             val resourceEntity = resourceService.restoreResource(id)
             Response
@@ -280,7 +285,8 @@ class ResourceController(
     @POST
     @Path("/{$PATH_PARAMETER_ID}/actions/copy")
     fun copyResource(@PathParam(PATH_PARAMETER_ID) id: String, @Context request: HttpServletRequest): Response {
-        requireRequestPathParameterIsEntityId(id, PATH_PARAMETER_ID, EntityType.RESOURCE, request)
+        requirePathParameterContainsAnyText(id, request, PATH_PARAMETER_ID)
+        requirePathParameterIsEntityId(id, EntityType.RESOURCE, request, PATH_PARAMETER_ID)
         return try {
             val resourceEntity = resourceService.copyResource(id)
             Response
@@ -304,11 +310,11 @@ class ResourceController(
         requestBody: ChangeResourceLocationRequestBody,
         @Context request: HttpServletRequest
     ): Response {
-        requireRequestPathParameterIsEntityId(id, PATH_PARAMETER_ID, EntityType.RESOURCE, request)
-        val parentId = requestBody.parentId
-        if (!parentId.isEntityId(EntityType.STORAGE, EntityType.RESOURCE)) {
-            throw ErrorResponseException(request, BAD_REQUEST, "Request body parameter 'parent_id' is incorrect.")
-        }
+        requirePathParameterContainsAnyText(id, request, PATH_PARAMETER_ID)
+        requirePathParameterIsEntityId(id, EntityType.RESOURCE, request, PATH_PARAMETER_ID)
+        val (parentId) = requestBody
+        requireRequestBodyPropertyContainsAnyText(parentId, request, "parent_id")
+        requireRequestBodyPropertyIsEntityId(parentId, arrayOf(EntityType.STORAGE, EntityType.RESOURCE), request, "parent_id")
         return try {
             val resourceEntity = resourceService.moveResource(id, parentId)
             Response
@@ -332,12 +338,10 @@ class ResourceController(
         requestBody: RenameResourceRequestBody,
         @Context request: HttpServletRequest
     ): Response {
-        requireRequestPathParameterIsEntityId(id, PATH_PARAMETER_ID, EntityType.RESOURCE, request)
-        val name = requestBody.name
-        requireRequestBodyPropertyContainsAnyText(name, "name", request)
-        if (name.length !in 1..255) {
-            throw ErrorResponseException(request, BAD_REQUEST, "Request body parameter 'name' must be 1 to 255 characters length.")
-        }
+        requirePathParameterIsEntityId(id, EntityType.RESOURCE, request, PATH_PARAMETER_ID)
+        val (name) = requestBody
+        requireRequestBodyPropertyContainsAnyText(name, request, "name")
+        requireRequestBodyPropertyLength(name, 1, 255, request, "name")
         return try {
             val resourceEntity = resourceService.renameResource(id, name)
             Response
@@ -361,29 +365,15 @@ class ResourceController(
         @Context request: HttpServletRequest
     ): Response {
         val (resourceIds, parentId, name) = requestBody
-        if (resourceIds.isEmpty()) {
-            throw ErrorResponseException(request, BAD_REQUEST, "Request body parameter 'request_ids' cannot be empty.")
-        }
+        if (resourceIds.isEmpty()) throw ErrorResponseException(request, BAD_REQUEST, "Request body property 'resource_ids' cannot be empty.")
         resourceIds.forEach {
-            if (it.trim().isEmpty()) {
-                throw ErrorResponseException(request, BAD_REQUEST, "Request body parameter 'request_ids' cannot contain empty value.")
-            }
-            if (!it.isEntityId(EntityType.RESOURCE)) {
-                throw ErrorResponseException(request, BAD_REQUEST, "Request body parameter 'request_ids' contains value ($it), that is incorrect.")
-            }
+            requireRequestBodyPropertyContainsAnyText(it, request) { "Request body property 'resource_ids' cannot contains empty value." }
+            requireRequestBodyPropertyIsEntityId(it, EntityType.RESOURCE, request) { "Request body property 'resource_ids' contains value ($it), that is incorrect." }
         }
-        if (parentId.trim().isEmpty()) {
-            throw ErrorResponseException(request, BAD_REQUEST, "Request body parameter 'parent_id' cannot be empty.")
-        }
-        if (!parentId.isEntityId(EntityType.STORAGE, EntityType.RESOURCE)) {
-            throw ErrorResponseException(request, BAD_REQUEST, "Request body parameter 'parent_id' is incorrect.")
-        }
-        if (name.trim().isEmpty()) {
-            throw ErrorResponseException(request, BAD_REQUEST, "Request body parameter 'name' cannot be empty.")
-        }
-        if (name.length !in 1..255) {
-            throw ErrorResponseException(request, BAD_REQUEST, "Request body parameter 'name' must be 1 to 255 characters length.")
-        }
+        requireRequestBodyPropertyContainsAnyText(parentId, request, "parent_id")
+        requireRequestBodyPropertyIsEntityId(parentId, arrayOf(EntityType.STORAGE, EntityType.RESOURCE), request, "parent_id")
+        requireRequestBodyPropertyContainsAnyText(name, request, "name")
+        requireRequestBodyPropertyLength(name, 1, 255, request, "name")
         return try {
             val resourceEntity = resourceService.compressResources(resourceIds, parentId, name)
             Response
@@ -407,16 +397,11 @@ class ResourceController(
         requestBody: ExtractResourcesRequestBody,
         @Context request: HttpServletRequest
     ): Response {
-        if (!id.isEntityId(EntityType.STORAGE, EntityType.RESOURCE)) {
-            throw ErrorResponseException(request, BAD_REQUEST, "Path parameter 'id' is incorrect.")
-        }
-        val parentId = requestBody.parentId
-        if (parentId.trim().isEmpty()) {
-            throw ErrorResponseException(request, BAD_REQUEST, "Request body parameter 'parent_id' cannot be empty.")
-        }
-        if (!parentId.isEntityId(EntityType.STORAGE, EntityType.RESOURCE)) {
-            throw ErrorResponseException(request, BAD_REQUEST, "Request body parameter 'parent_id' is incorrect.")
-        }
+        requirePathParameterContainsAnyText(id, request, PATH_PARAMETER_ID)
+        requirePathParameterIsEntityId(id, EntityType.RESOURCE, request, PATH_PARAMETER_ID)
+        val (parentId) = requestBody
+        requireRequestBodyPropertyContainsAnyText(parentId, request, "parent_id")
+        requireRequestBodyPropertyIsEntityId(parentId, arrayOf(EntityType.STORAGE, EntityType.RESOURCE), request, "parent_id")
         return try {
             val resourceEntities = resourceService.extractResource(id, parentId)
             Response
@@ -437,11 +422,10 @@ class ResourceController(
     @Path("/{$PATH_PARAMETER_ID}/contents")
     @Produces(APPLICATION_OCTET_STREAM)
     fun getResourceContents(@PathParam(PATH_PARAMETER_ID) id: String, @Context request: HttpServletRequest): Response {
-        requireRequestPathParameterIsEntityId(id, PATH_PARAMETER_ID, EntityType.RESOURCE, request)
+        requirePathParameterContainsAnyText(id, request, PATH_PARAMETER_ID)
+        requirePathParameterIsEntityId(id, EntityType.RESOURCE, request, PATH_PARAMETER_ID)
         return try {
-            val resourceEntity = resourceService
-                .getResourceById(id)
-                ?: throw EntityException(EntityException.Type.ENTITY_NOT_FOUND, "Resource '$id' could not be found.")
+            val resourceEntity = resourceService.getResourceById(id) ?: throw EntityException(EntityException.Type.ENTITY_NOT_FOUND, "Resource '$id' could not be found.")
             val resource =
                 if (resourceEntity.directory) {
                     val storage = Paths.get(storageService.getStorageByUserId(resourceEntity.userId)!!.path)

@@ -18,7 +18,7 @@ import com.nerosec.sono.commons.extension.Extensions.remove
 import com.nerosec.sono.commons.extension.Extensions.renameTo
 import com.nerosec.sono.commons.persistence.SortOrder
 import com.nerosec.sono.commons.persistence.entity.EntityType
-import com.nerosec.sono.commons.prerequisites.Prerequisites.requireIntArgumentInInIncRange
+import com.nerosec.sono.commons.prerequisites.Prerequisites.requireIntArgumentIsInRange
 import com.nerosec.sono.commons.prerequisites.Prerequisites.requireStringArgumentContainsAnyText
 import com.nerosec.sono.commons.prerequisites.Prerequisites.requireStringArgumentIsEntityId
 import com.nerosec.sono.commons.service.BaseService
@@ -97,9 +97,9 @@ class ResourceService(
         inputStream: InputStream? = null
     ): ResourceEntity {
         requireStringArgumentContainsAnyText(parentId, "parentId")
-        requireStringArgumentIsEntityId(parentId, "parentId", EntityType.STORAGE, EntityType.RESOURCE)
+        requireStringArgumentIsEntityId(parentId, arrayOf(EntityType.STORAGE, EntityType.RESOURCE), "parentId")
         requireStringArgumentContainsAnyText(userId, "userId")
-        requireStringArgumentIsEntityId(userId, "userId", EntityType.USER)
+        requireStringArgumentIsEntityId(userId, EntityType.USER, "userId")
         requireStringArgumentContainsAnyText(name, "name")
         if (!directory && inputStream == null) throw ArgumentException("Argument 'inputStream' is required.")
         val parent =
@@ -155,7 +155,7 @@ class ResourceService(
 
     fun getResourceById(id: String): ResourceEntity? {
         requireStringArgumentContainsAnyText(id, "id")
-        requireStringArgumentIsEntityId(id, "id", EntityType.RESOURCE)
+        requireStringArgumentIsEntityId(id, EntityType.RESOURCE, "id")
         return resourceRepository.getResourceEntityById(id)
     }
 
@@ -177,10 +177,8 @@ class ResourceService(
 
     fun removeResourceById(id: String) {
         requireStringArgumentContainsAnyText(id, "id")
-        requireStringArgumentIsEntityId(id, "id", EntityType.RESOURCE)
-        val resourceEntity = resourceRepository
-            .getResourceEntityById(id)
-            ?: throw EntityException(message = "Resource '$id' could not be removed: resource could not be found.")
+        requireStringArgumentIsEntityId(id, EntityType.RESOURCE, "id")
+        val resourceEntity = resourceRepository.getResourceEntityById(id) ?: throw EntityException(message = "Resource '$id' could not be removed: resource could not be found.")
         Paths.get(resourceEntity.path).remove()
         val resourceIds = ArrayList(resourceEntity.list().map { it.id!! })
         resourceIds.add(id)
@@ -189,9 +187,8 @@ class ResourceService(
 
     fun trashResource(id: String): ResourceEntity {
         requireStringArgumentContainsAnyText(id, "id")
-        requireStringArgumentIsEntityId(id, "id", EntityType.RESOURCE)
-        var resourceEntity = resourceRepository
-            .getResourceEntityById(id)
+        requireStringArgumentIsEntityId(id, EntityType.RESOURCE, "id")
+        var resourceEntity = resourceRepository.getResourceEntityById(id)
             ?: throw EntityException(message = "Resource '$id' could not be moved to trash: resource could not be found.")
         if (resourceEntity.trashed) throw StateException("Resource '$id' could not be moved to trash: resource is in trash.")
         val bin = storageRepository
@@ -225,9 +222,8 @@ class ResourceService(
 
     fun restoreResource(id: String): ResourceEntity {
         requireStringArgumentContainsAnyText(id, "id")
-        requireStringArgumentIsEntityId(id, "id", EntityType.RESOURCE)
-        var resourceEntity = resourceRepository
-            .getResourceEntityById(id)
+        requireStringArgumentIsEntityId(id, EntityType.RESOURCE, "id")
+        var resourceEntity = resourceRepository.getResourceEntityById(id)
             ?: throw EntityException(message = "Resource '$id' could not be restored: resource could not be found.")
         if (!resourceEntity.trashed) throw StateException("Resource '$id' could not be restored: resource is not in trash.")
         val resource = Paths.get(resourceEntity.path)
@@ -247,8 +243,7 @@ class ResourceService(
                         }
                 }
             }
-        parent
-            ?: throw EntityException(message = "Resource '$id' could not be restored: it's parent directory '$parentId' could not be found.")
+        parent ?: throw EntityException(message = "Resource '$id' could not be restored: it's parent directory '$parentId' could not be found.")
         if (parent.resolve(resourceEntity.name).exists()) {
             throw StateException("Resource '$id' could not be restored: such resource exists in it's parent directory '$parentId'.")
         } else {
@@ -266,9 +261,8 @@ class ResourceService(
 
     fun copyResource(id: String): ResourceEntity {
         requireStringArgumentContainsAnyText(id, "id")
-        requireStringArgumentIsEntityId(id, "id", EntityType.RESOURCE)
-        val resourceEntity = resourceRepository
-            .getResourceEntityById(id)
+        requireStringArgumentIsEntityId(id, EntityType.RESOURCE, "id")
+        val resourceEntity = resourceRepository.getResourceEntityById(id)
             ?: throw EntityException(message = "Resource '$id' could not be copied: resource could not be found.")
         if (resourceEntity.trashed) throw StateException("Resource '$id' could not be copied: resource is in trash.")
         val resource = Paths.get(resourceEntity.path)
@@ -326,11 +320,10 @@ class ResourceService(
 
     fun moveResource(id: String, parentId: String): ResourceEntity {
         requireStringArgumentContainsAnyText(id, "id")
-        requireStringArgumentIsEntityId(id, "id", EntityType.RESOURCE)
+        requireStringArgumentIsEntityId(id, EntityType.RESOURCE, "id")
         requireStringArgumentContainsAnyText(parentId, "parentId")
-        requireStringArgumentIsEntityId(parentId, "parentId", EntityType.STORAGE, EntityType.RESOURCE)
-        var resourceEntity = resourceRepository
-            .getResourceEntityById(id)
+        requireStringArgumentIsEntityId(parentId, arrayOf(EntityType.STORAGE, EntityType.RESOURCE), "parentId")
+        var resourceEntity = resourceRepository.getResourceEntityById(id)
             ?: throw EntityException(message = "Resource '$id' could not be moved: resource could not be found.")
         if (resourceEntity.trashed) throw StateException("Resource '$id' could not be moved: resource is in trash.")
         val parent =
@@ -373,11 +366,10 @@ class ResourceService(
 
     fun renameResource(id: String, name: String): ResourceEntity {
         requireStringArgumentContainsAnyText(id, "id")
-        requireStringArgumentIsEntityId(id, "id", EntityType.RESOURCE)
+        requireStringArgumentIsEntityId(id, EntityType.RESOURCE, "id")
         requireStringArgumentContainsAnyText(name, "name")
-        requireIntArgumentInInIncRange(name.length, 1, 255) { "Argument 'name' must be 1 to 255 characters length." }
-        var resourceEntity = resourceRepository
-            .getResourceEntityById(id)
+        requireIntArgumentIsInRange(name.length, 1, 255, "name")
+        var resourceEntity = resourceRepository.getResourceEntityById(id)
             ?: throw EntityException(message = "Resource '$id' could not be renamed: resource could not be found.")
         if (resourceEntity.trashed) throw StateException("Resource '$id' could not be renamed: resource is in trash.")
         val resource = Paths.get(resourceEntity.path)
@@ -409,9 +401,9 @@ class ResourceService(
             requireStringArgumentIsEntityId(it, EntityType.RESOURCE) { "Argument 'resourceIds' contains value ($it), that is incorrect." }
         }
         requireStringArgumentContainsAnyText(parentId, "parentId")
-        requireStringArgumentIsEntityId(parentId, "parentId", EntityType.STORAGE, EntityType.RESOURCE)
+        requireStringArgumentIsEntityId(parentId, arrayOf(EntityType.STORAGE, EntityType.RESOURCE), "parentId")
         requireStringArgumentContainsAnyText(name, "name")
-        requireIntArgumentInInIncRange(name.length, 1, 255) { "Argument 'name' must be 1 to 255 characters length." }
+        requireIntArgumentIsInRange(name.length, 1, 255, "name")
         val resourceEntities = resourceRepository.getResourceEntitiesByIds(resourceIds)
         if (resourceEntities.size != resourceIds.size) {
             val missingResourcesCount = resourceIds.size - resourceEntities.size
@@ -469,14 +461,13 @@ class ResourceService(
 
     fun extractResource(id: String, parentId: String): List<ResourceEntity> {
         requireStringArgumentContainsAnyText(id, "id")
-        requireStringArgumentIsEntityId(id, "id", EntityType.RESOURCE)
-        val resourceEntity = resourceRepository
-            .getResourceEntityById(id)
+        requireStringArgumentIsEntityId(id, EntityType.RESOURCE, "id")
+        val resourceEntity = resourceRepository.getResourceEntityById(id)
             ?: throw EntityException(message = "Resource '$id' could not be extracted: resource could not be found.")
         val resource = Paths.get(resourceEntity.path)
         if (!resource.isZip()) throw ArgumentException("Resource '$id' could not be extracted: resource is not an archive.")
         requireStringArgumentContainsAnyText(parentId, "parentId")
-        requireStringArgumentIsEntityId(parentId, "parentId", EntityType.STORAGE, EntityType.RESOURCE)
+        requireStringArgumentIsEntityId(parentId, arrayOf(EntityType.STORAGE, EntityType.RESOURCE), "parentId")
         lateinit var userId: String
         val parent =
             when (val parentEntityType = EntityType.createFromEntityId(parentId)) {
