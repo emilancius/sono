@@ -2,7 +2,6 @@ package com.nerosec.storage.contract.request
 
 import com.fasterxml.jackson.annotation.JsonProperty
 
-
 data class CompressResourcesRequestBody(
     @JsonProperty("resource_ids")
     val resourceIds: List<String>,

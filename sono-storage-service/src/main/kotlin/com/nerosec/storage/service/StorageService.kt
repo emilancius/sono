@@ -11,6 +11,7 @@ import com.nerosec.sono.commons.prerequisites.Prerequisites.requireStringArgumen
 import com.nerosec.sono.commons.prerequisites.Prerequisites.requireStringArgumentIsEntityId
 import com.nerosec.sono.commons.service.BaseService
 import com.nerosec.storage.persistence.entity.StorageEntity
+import com.nerosec.storage.persistence.entity.StorageEntityPropertyTypes
 import com.nerosec.storage.persistence.entity.StorageEntity_
 import com.nerosec.storage.persistence.repository.ResourceRepository
 import com.nerosec.storage.persistence.repository.StorageRepository
@@ -19,7 +20,6 @@ import jakarta.persistence.metamodel.SingularAttribute
 import org.springframework.data.domain.Page
 import org.springframework.stereotype.Service
 import java.nio.file.Paths
-import java.time.Instant
 import kotlin.io.path.createDirectory
 
 @Service
@@ -42,17 +42,6 @@ class StorageService(
             StorageEntity_.ID,
             StorageEntity_.USER_ID
         )
-
-        @Suppress("UNCHECKED_CAST")
-        val PROPERTY_TYPES =
-            mapOf(
-                StorageEntity_.ID to StorageEntity_.id as SingularAttribute<StorageEntity, String>,
-                StorageEntity_.USER_ID to StorageEntity_.userId as SingularAttribute<StorageEntity, String>,
-                StorageEntity_.PATH to StorageEntity_.path as SingularAttribute<StorageEntity, String>,
-                StorageEntity_.VERSION to StorageEntity_.version as SingularAttribute<StorageEntity, Int>,
-                StorageEntity_.CREATED to StorageEntity_.created as SingularAttribute<StorageEntity, Instant>,
-                StorageEntity_.LAST_UPDATED to StorageEntity_.lastUpdated as SingularAttribute<StorageEntity, Instant>
-            )
     }
 
     fun createStorage(userId: String): StorageEntity {
@@ -108,7 +97,7 @@ class StorageService(
         storageRepository.removeStorageEntityById(id)
     }
 
-    override fun getEntityPropertyTypes(): Map<String, SingularAttribute<StorageEntity, out Any>> = PROPERTY_TYPES
+    override fun getEntityPropertyTypes(): Map<String, SingularAttribute<StorageEntity, out Any>> = StorageEntityPropertyTypes.PROPERTY_TYPES
 
     override fun getPropertiesToSortBy(): List<String> = SUPPORTED_PROPERTIES_TO_SORT_BY
 

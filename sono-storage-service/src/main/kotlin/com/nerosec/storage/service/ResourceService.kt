@@ -23,6 +23,7 @@ import com.nerosec.sono.commons.prerequisites.Prerequisites.requireStringArgumen
 import com.nerosec.sono.commons.prerequisites.Prerequisites.requireStringArgumentIsEntityId
 import com.nerosec.sono.commons.service.BaseService
 import com.nerosec.storage.persistence.entity.ResourceEntity
+import com.nerosec.storage.persistence.entity.ResourceEntityPropertyTypes
 import com.nerosec.storage.persistence.entity.ResourceEntity_
 import com.nerosec.storage.persistence.repository.ResourceRepository
 import com.nerosec.storage.persistence.repository.StorageRepository
@@ -67,25 +68,6 @@ class ResourceService(
             ResourceEntity_.DIRECTORY,
             ResourceEntity_.TRASHED
         )
-
-        @Suppress("UNCHECKED_CAST")
-        val PROPERTY_TYPES =
-            mapOf(
-                ResourceEntity_.ID to ResourceEntity_.id as SingularAttribute<ResourceEntity, String>,
-                ResourceEntity_.PARENT_ID to ResourceEntity_.parentId as SingularAttribute<ResourceEntity, String>,
-                ResourceEntity_.USER_ID to ResourceEntity_.userId as SingularAttribute<ResourceEntity, String>,
-                ResourceEntity_.NAME to ResourceEntity_.name as SingularAttribute<ResourceEntity, String>,
-                ResourceEntity_.EXTENSION to ResourceEntity_.extension as SingularAttribute<ResourceEntity, String>,
-                ResourceEntity_.PATH to ResourceEntity_.path as SingularAttribute<ResourceEntity, String>,
-                ResourceEntity_.TYPE to ResourceEntity_.type as SingularAttribute<ResourceEntity, String>,
-                ResourceEntity_.BYTES_COUNT to ResourceEntity_.bytesCount as SingularAttribute<ResourceEntity, Long>,
-                ResourceEntity_.DESCRIPTION to ResourceEntity_.description as SingularAttribute<ResourceEntity, String>,
-                ResourceEntity_.DIRECTORY to ResourceEntity_.directory as SingularAttribute<ResourceEntity, Boolean>,
-                ResourceEntity_.TRASHED to ResourceEntity_.trashed as SingularAttribute<ResourceEntity, Boolean>,
-                ResourceEntity_.VERSION to ResourceEntity_.version as SingularAttribute<ResourceEntity, Int>,
-                ResourceEntity_.CREATED to ResourceEntity_.created as SingularAttribute<ResourceEntity, Instant>,
-                ResourceEntity_.LAST_UPDATED to ResourceEntity_.lastUpdated as SingularAttribute<ResourceEntity, Instant>
-            )
     }
 
     fun createResource(
@@ -549,7 +531,7 @@ class ResourceService(
             resources
         }
 
-    override fun getEntityPropertyTypes(): Map<String, SingularAttribute<ResourceEntity, out Any>> = PROPERTY_TYPES
+    override fun getEntityPropertyTypes(): Map<String, SingularAttribute<ResourceEntity, out Any>> = ResourceEntityPropertyTypes.PROPERTY_TYPES
 
     override fun getPropertiesToSortBy(): List<String> = SUPPORTED_PROPERTIES_TO_SORT_BY
 

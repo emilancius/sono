@@ -18,7 +18,7 @@ object Prerequisites {
         requireStringArgumentContainsAnyText(argument) { "Argument '$name' cannot be empty." }
 
     fun requireStringArgumentIsEntityId(argument: String, entityTypes: Array<EntityType>, message: (() -> String?)? = null) =
-        requireArgument(!argument.isEntityId(*entityTypes), message)
+        requireArgument(argument.isEntityId(*entityTypes), message)
 
     fun requireStringArgumentIsEntityId(argument: String, entityType: EntityType, message: (() -> String?)? = null) =
         requireStringArgumentIsEntityId(argument, arrayOf(entityType), message)
