@@ -17,7 +17,6 @@ object TestingCompanion {
     const val STORAGE_PATH = "TEST_STORAGE"
     const val USER_STORAGE_TRASH_DIRECTORY = "bin"
     const val USER_STORAGE_TEMPORARY_FILES_DIRECTORY = "temp"
-    const val INCORRECT_ENTITY_ID = "<incorrect_entity_id>"
 
     val storage: Path = Paths.get(STORAGE_PATH)
 

@@ -7,17 +7,16 @@ import com.nerosec.sono.commons.extension.Extensions.createFromInputStream
 import com.nerosec.sono.commons.extension.Extensions.list
 import com.nerosec.sono.commons.persistence.entity.EntityId
 import com.nerosec.sono.commons.persistence.entity.EntityType
-import com.nerosec.sono.storage.TestingCompanion.INCORRECT_ENTITY_ID
 import com.nerosec.sono.storage.TestingCompanion.STORAGE_PATH
 import com.nerosec.sono.storage.TestingCompanion.USER_STORAGE_TEMPORARY_FILES_DIRECTORY
 import com.nerosec.sono.storage.TestingCompanion.USER_STORAGE_TRASH_DIRECTORY
 import com.nerosec.sono.storage.TestingCompanion.createSystemStorage
 import com.nerosec.sono.storage.TestingCompanion.createUserStorage
+import com.nerosec.sono.storage.TestingCompanion.removeSystemStorage
+import com.nerosec.sono.storage.persistence.entity.StorageEntity
 import com.nerosec.sono.storage.persistence.repository.ResourceRepository
 import com.nerosec.sono.storage.persistence.repository.StorageRepository
 import com.nerosec.sono.storage.settings.StorageSettings
-import com.nerosec.sono.storage.TestingCompanion.removeSystemStorage
-import com.nerosec.sono.storage.persistence.entity.StorageEntity
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -55,15 +54,13 @@ class StorageServiceTest {
 
     @Test
     fun `createStorage - given empty 'userId' argument, produces ArgumentException`() {
-        assertThrows<ArgumentException> {
-            storageService.createStorage("")
-        }
+        assertThrows<ArgumentException> { storageService.createStorage("") }
     }
 
     @Test
     fun `createStorage - given incorrect 'userId' argument, produces ArgumentException`() {
-        assertThrows<ArgumentException> {
-            storageService.createStorage(INCORRECT_ENTITY_ID)
+        EntityType.values().map { if (it == EntityType.USER) "<incorrect_user_id>" else EntityId.generate(it) }.forEach {
+            assertThrows<ArgumentException> { storageService.createStorage(it) }
         }
     }
 
@@ -71,9 +68,7 @@ class StorageServiceTest {
     fun `createStorage - given 'userId' argument, that storage exists for, produces StateException`() {
         val userId = EntityId.generate(EntityType.USER)
         `when`(storageRepository.existsStorageEntityByUserId(eq(userId))).thenReturn(true)
-        assertThrows<StateException> {
-            storageService.createStorage(userId)
-        }
+        assertThrows<StateException> { storageService.createStorage(userId) }
     }
 
     @Test
@@ -100,15 +95,13 @@ class StorageServiceTest {
 
     @Test
     fun `getStorageById - given empty 'id' argument, produces ArgumentException`() {
-        assertThrows<ArgumentException> {
-            storageService.getStorageById("")
-        }
+        assertThrows<ArgumentException> { storageService.getStorageById("") }
     }
 
     @Test
     fun `getStorageById - given incorrect 'id' argument, produces ArgumentException`() {
-        assertThrows<ArgumentException> {
-            storageService.getStorageById(INCORRECT_ENTITY_ID)
+        EntityType.values().map { if (it == EntityType.STORAGE) "<incorrect_storage_id>" else EntityId.generate(it) }.forEach {
+            assertThrows<ArgumentException> { storageService.getStorageById(it) }
         }
     }
 
@@ -123,15 +116,13 @@ class StorageServiceTest {
 
     @Test
     fun `getStorageByUserId - given empty 'userId' argument, produces ArgumentException`() {
-        assertThrows<ArgumentException> {
-            storageService.getStorageByUserId("")
-        }
+        assertThrows<ArgumentException> { storageService.getStorageByUserId("") }
     }
 
     @Test
     fun `getStorageByUserId - given incorrect 'userId' argument, produces ArgumentException`() {
-        assertThrows<ArgumentException> {
-            storageService.getStorageByUserId(INCORRECT_ENTITY_ID)
+        EntityType.values().map { if (it == EntityType.USER) "<incorrect_user_id>" else EntityId.generate(it) }.forEach {
+            assertThrows<ArgumentException> { storageService.getStorageByUserId(it) }
         }
     }
 
@@ -145,15 +136,13 @@ class StorageServiceTest {
 
     @Test
     fun `removeStorageById - given empty 'id' argument, produces ArgumentException`() {
-        assertThrows<ArgumentException> {
-            storageService.removeStorageById("")
-        }
+        assertThrows<ArgumentException> { storageService.removeStorageById("") }
     }
 
     @Test
     fun `removeStorageById - given incorrect 'id' argument, produces ArgumentException`() {
-        assertThrows<ArgumentException> {
-            storageService.removeStorageById(INCORRECT_ENTITY_ID)
+        EntityType.values().map { if (it == EntityType.STORAGE) "<incorrect_storage_id>" else EntityId.generate(it) }.forEach {
+            assertThrows<ArgumentException> { storageService.removeStorageById(it) }
         }
     }
 
@@ -161,9 +150,7 @@ class StorageServiceTest {
     fun `removeStorageById - given 'id' argument for storage, that does not exist, produces EntityException of type ENTITY_NOT_FOUND`() {
         val storageId = EntityId.generate(EntityType.STORAGE)
         `when`(storageRepository.getStorageEntityById(eq(storageId))).thenReturn(null)
-        val exception = assertThrows<EntityException> {
-            storageService.removeStorageById(storageId)
-        }
+        val exception = assertThrows<EntityException> { storageService.removeStorageById(storageId) }
         assertEquals(EntityException.Type.ENTITY_NOT_FOUND, exception.type)
     }
 
@@ -175,7 +162,7 @@ class StorageServiceTest {
         val storageId = storageEntity.id!!
         `when`(storageRepository.getStorageEntityById(eq(storageId))).thenReturn(storageEntity)
         val resource = storage.resolve("TEXT_FILE.txt")
-        resource.createFromInputStream("TEXT_FILE.txt contents".byteInputStream())
+        "TEXT_FILE.txt contents".byteInputStream().use { resource.createFromInputStream(it) }
         `when`(resourceRepository.removeResourceEntitiesByUserId(eq(userId))).then { }
         storageService.removeStorageById(storageId)
         verify(resourceRepository, times(1)).removeResourceEntitiesByUserId(eq(userId))
