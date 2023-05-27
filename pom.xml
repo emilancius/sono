@@ -211,6 +211,10 @@
                         <exclude>com/nerosec/sono/commons/service/BaseService*</exclude>
                         <!-- sono-storage-service -->
                         <exclude>com/nerosec/sono/storage/StorageServiceApplication*</exclude>
+                        <exclude>com/nerosec/sono/storage/contract/request/**/*</exclude>
+                        <exclude>com/nerosec/sono/storage/contract/response/**/*</exclude>
+                        <exclude>com/nerosec/sono/storage/persistence/entity/**/*</exclude>
+                        <exclude>com/nerosec/sono/storage/persistence/repository/**/*</exclude>
                         <exclude>com/nerosec/sono/storage/settings/**/*</exclude>
                     </excludes>
                 </configuration>
