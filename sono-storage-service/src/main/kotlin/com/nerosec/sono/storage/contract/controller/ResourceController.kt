@@ -430,7 +430,7 @@ class ResourceController(
                 if (resourceEntity.directory) {
                     val storage = Paths.get(storageService.getStorageByUserId(resourceEntity.userId)!!.path)
                     val archive = storage
-                        .resolve(StorageService.TEMP_DIRECTORY)
+                        .resolve(StorageService.TEMPORARY_FILES_DIRECTORY)
                         .resolve("${resourceEntity.name} ${System.nanoTime()}.${CompressionType.ZIP.extension}")
                     Paths.get(resourceEntity.path).compressAsZip(archive)
                 } else {

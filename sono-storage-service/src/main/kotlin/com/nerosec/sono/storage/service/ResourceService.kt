@@ -173,7 +173,7 @@ class ResourceService(
         if (resourceEntity.trashed) throw StateException("Resource '$id' could not be moved to trash: resource is in trash.")
         val bin = storageRepository
             .getStorageEntityByUserId(resourceEntity.userId)!!
-            .let { Paths.get(it.path).resolve(StorageService.BIN_DIRECTORY) }
+            .let { Paths.get(it.path).resolve(StorageService.TRASH_DIRECTORY) }
         var resource = Paths.get(resourceEntity.path)
         if (bin.resolve(resourceEntity.name).exists()) {
             var name = "${resourceEntity.name.substringBeforeLast('.')} ${System.nanoTime()}"

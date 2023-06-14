@@ -30,8 +30,8 @@ class StorageService(
 ) : BaseService<StorageEntity>() {
 
     companion object {
-        const val BIN_DIRECTORY = "bin"
-        const val TEMP_DIRECTORY = "temp"
+        const val TRASH_DIRECTORY = "bin"
+        const val TEMPORARY_FILES_DIRECTORY = "temp"
         const val DEFAULT_PROPERTY_TO_SORT_BY = StorageEntity_.CREATED
         val SUPPORTED_PROPERTIES_TO_SORT_BY = listOf(
             StorageEntity_.ID,
@@ -50,10 +50,9 @@ class StorageService(
         if (storageRepository.existsStorageEntityByUserId(userId)) {
             throw StateException("Storage could not be created for user '$userId': storage exists.")
         }
-        val systemStorage = Paths.get(storageSettings.path)
-        val storage = systemStorage.resolve(userId.hash(HashType.SHA_512).uppercase()).createDirectory()
-        storage.resolve(BIN_DIRECTORY).createDirectory()
-        storage.resolve(TEMP_DIRECTORY).createDirectory()
+        val storage = Paths.get(storageSettings.path).resolve(userId.hash(HashType.SHA_512).uppercase()).createDirectory()
+        storage.resolve(TRASH_DIRECTORY).createDirectory()
+        storage.resolve(TEMPORARY_FILES_DIRECTORY).createDirectory()
         val storageEntity =
             StorageEntity(
                 userId = userId,
